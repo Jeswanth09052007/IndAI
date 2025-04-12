@@ -1,0 +1,1310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solar Storm Defense & Prediction Center</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&display=swap');
+
+        body {
+            background-color: #0a0a1a;
+            color: #e0e0ff;
+            overflow-x: hidden;
+        }
+
+        #loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #0a0a1a;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(0, 150, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #0096ff;
+            animation: spin 1s ease-in-out infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        header {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 100;
+            background: linear-gradient(to bottom, rgba(10, 10, 26, 0.9), rgba(10, 10, 26, 0));
+            backdrop-filter: blur(5px);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+        }
+
+        .logo img {
+            height: 40px;
+            margin-right: 10px;
+        }
+
+        .logo h1 {
+            font-size: 1.5rem;
+            background: linear-gradient(to right, #00c6ff, #0072ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        nav ul {
+            display: flex;
+            list-style: none;
+        }
+
+        nav ul li {
+            margin-left: 30px;
+        }
+
+        nav ul li a {
+            color: #e0e0ff;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        nav ul li a:hover {
+            color: #0096ff;
+        }
+
+        nav ul li a::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: #0096ff;
+            transition: width 0.3s ease;
+        }
+
+        nav ul li a:hover::after {
+            width: 100%;
+        }
+
+        .hero {
+            height: 100vh;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 0 20px;
+        }
+
+        .hero-content {
+            z-index: 10;
+            max-width: 800px;
+        }
+
+        .hero h2 {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            background: linear-gradient(to right, #00c6ff, #0072ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+
+        .cta-button {
+            display: inline-block;
+            padding: 12px 30px;
+            background: linear-gradient(to right, #00c6ff, #0072ff);
+            color: white;
+            border-radius: 30px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        .cta-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0, 198, 255, 0.3);
+        }
+
+        #earth-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        .dashboard {
+            padding: 100px 20px;
+            position: relative;
+            z-index: 2;
+            background: rgba(10, 10, 26, 0.8);
+        }
+
+        .section-title {
+            text-align: center;
+            margin-bottom: 50px;
+            font-size: 2.5rem;
+            background: linear-gradient(to right, #00c6ff, #0072ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .dashboard-card {
+            background: rgba(20, 20, 40, 0.7);
+            border-radius: 15px;
+            padding: 25px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 198, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .dashboard-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 30px rgba(0, 198, 255, 0.2);
+            border-color: rgba(0, 198, 255, 0.5);
+        }
+
+        .card-title {
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+            color: #0096ff;
+            display: flex;
+            align-items: center;
+        }
+
+        .card-title i {
+            margin-right: 10px;
+            font-size: 1.5rem;
+        }
+
+        .card-value {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .card-description {
+            font-size: 0.9rem;
+            color: #a0a0c0;
+            line-height: 1.5;
+        }
+
+        .alert {
+            color: #ff5555;
+            font-weight: 700;
+        }
+
+        .warning {
+            color: #ffaa55;
+            font-weight: 700;
+        }
+
+        .safe {
+            color: #55ff55;
+            font-weight: 700;
+        }
+
+        #solar-system-container {
+            width: 100%;
+            height: 600px;
+            margin: 50px 0;
+            position: relative;
+        }
+
+        .visualization-controls {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+            gap: 15px;
+        }
+
+        .visualization-controls button {
+            padding: 8px 15px;
+            background: rgba(0, 150, 255, 0.2);
+            color: #e0e0ff;
+            border: 1px solid #0096ff;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .visualization-controls button:hover {
+            background: rgba(0, 150, 255, 0.4);
+        }
+
+        .visualization-controls button.active {
+            background: #0096ff;
+            color: white;
+        }
+
+        .timeline {
+            width: 100%;
+            height: 100px;
+            background: rgba(20, 20, 40, 0.7);
+            border-radius: 10px;
+            margin-top: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .timeline-inner {
+            height: 100%;
+            width: 100%;
+            position: relative;
+        }
+
+        .timeline-event {
+            position: absolute;
+            height: 100%;
+            width: 2px;
+            background: #0096ff;
+            top: 0;
+        }
+
+        .timeline-event::after {
+            content: attr(data-date);
+            position: absolute;
+            bottom: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.8rem;
+            color: #a0a0c0;
+        }
+
+        .timeline-event::before {
+            content: attr(data-event);
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 0.8rem;
+            color: white;
+            background: rgba(0, 150, 255, 0.5);
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+
+        .prediction-section {
+            padding: 100px 20px;
+            background: rgba(5, 5, 15, 0.8);
+        }
+
+        .prediction-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .prediction-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-top: 50px;
+        }
+
+        .prediction-card {
+            background: rgba(20, 20, 40, 0.7);
+            border-radius: 15px;
+            padding: 25px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 198, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .prediction-card h3 {
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+            color: #0096ff;
+        }
+
+        .prediction-card p {
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+
+        .prediction-card .probability {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .defense-section {
+            padding: 100px 20px;
+            background: rgba(10, 10, 26, 0.8);
+        }
+
+        .defense-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .defense-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-top: 50px;
+        }
+
+        .defense-card {
+            background: rgba(20, 20, 40, 0.7);
+            border-radius: 15px;
+            padding: 25px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 198, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .defense-card h3 {
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+            color: #0096ff;
+        }
+
+        .defense-card p {
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+
+        .defense-card .status {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .status-active {
+            background: rgba(0, 255, 0, 0.2);
+            color: #55ff55;
+        }
+
+        .status-development {
+            background: rgba(255, 255, 0, 0.2);
+            color: #ffff55;
+        }
+
+        .status-experimental {
+            background: rgba(255, 0, 0, 0.2);
+            color: #ff5555;
+        }
+
+        footer {
+            background: rgba(5, 5, 15, 0.9);
+            padding: 50px 20px;
+            text-align: center;
+        }
+
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+
+        .footer-links a {
+            color: #a0a0c0;
+            margin: 0 15px;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .footer-links a:hover {
+            color: #0096ff;
+        }
+
+        .social-links {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+
+        .social-links a {
+            color: #a0a0c0;
+            margin: 0 15px;
+            font-size: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .social-links a:hover {
+            color: #0096ff;
+        }
+
+        .copyright {
+            color: #606080;
+            font-size: 0.9rem;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            header {
+                flex-direction: column;
+                padding: 15px;
+            }
+
+            nav ul {
+                margin-top: 15px;
+            }
+
+            nav ul li {
+                margin-left: 15px;
+            }
+
+            .hero h2 {
+                font-size: 2rem;
+            }
+
+            .hero p {
+                font-size: 1rem;
+            }
+
+            .section-title {
+                font-size: 2rem;
+            }
+
+            #solar-system-container {
+                height: 400px;
+            }
+        }
+
+        /* Animation classes */
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
+        }
+
+        .float {
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+            100% { transform: translateY(0px); }
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+        <div class="loading-spinner"></div>
+        <h2>Initializing Solar Monitoring Systems</h2>
+        <p>Loading real-time space weather data...</p>
+    </div>
+
+    <!-- Header -->
+    <header>
+        <div class="logo">
+            <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48cGF0aCBmaWxsPSIjMDA5NmZmIiBkPSJNMjU2IDhDMTE5IDggOCAxMTkgOCAyNTZzMTExIDI0OCAyNDggMjQ4IDI0OC0xMTEgMjQ4LTI0OFMzOTMgOCAyNTYgOHptMCA0NDhjLTExMC41IDAtMjAwLTg5LjUtMjAwLTIwMFMxNDUuNSA1NiAyNTYgNTZzMjAwIDg5LjUgMjAwIDIwMC04OS41IDIwMC0yMDAgMjAwWm0xMDEuOC0yNjEuN2wtODQuOS02MS43Yy0zLjEtMi4yLTcuMi0yLjItMTAuMyAwbC04NC45IDYxLjdjLTMuOSAyLjgtNC4xIDguMi0uNCAxMS4ybDQwLjQgMjkuNGMtMS4xIDMuMy0uNiA3IDEuMiAxMC4ybC0zOC41IDQwLjRjLTIuOCAzLjEtMi40IDcuOS44IDEwLjlsNTkuNSA1OS41YzMuMSAzLjEgOC4yIDMuNiAxMS4yLjdsNDAuNC0zOC41YzMuMyAxLjggNyAxLjkgMTAuMiAxLjJsMjkuNCA0MC40YzIuOCAzLjkgOC4yIDMuNiAxMS4yLS40bDYxLjctODQuOWMzLjEtNC4xIDIuOC0xMC4yLS40LTEzLjNMMzY3IDIwOS44YzEuOS0xLjEgMy4zLTIuOSAzLjctNS4xLjQtMi4yLS4xLTQuNS0xLjQtNi4zbDI5LjQtNDAuNGMyLjgtMy45IDIuNC05LjItMS4yLTEyLjJsLTYxLjctODQuOVoiLz48L3N2Zz4=" alt="Solar Shield Logo">
+            <h1>SOLAR SHIELD</h1>
+        </div>
+        <nav>
+            <ul>
+                <li><a href="#dashboard">Dashboard</a></li>
+                <li><a href="#predictions">Predictions</a></li>
+                <li><a href="#defense">Defense</a></li>
+                <li><a href="#about">About</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <!-- Hero Section with 3D Earth -->
+    <section class="hero">
+        <div class="hero-content">
+            <h2>Solar Storm Defense & Prediction</h2>
+            <p>Advanced monitoring and protection systems to safeguard our planet from solar storms and coronal mass ejections. Real-time tracking, predictive analytics, and defense mechanisms powered by AI and space technology.</p>
+            <a href="#dashboard" class="cta-button">VIEW REAL-TIME DATA</a>
+        </div>
+        <div id="earth-container"></div>
+    </section>
+
+    <!-- Dashboard Section -->
+    <section id="dashboard" class="dashboard">
+        <h2 class="section-title">SOLAR ACTIVITY DASHBOARD</h2>
+        <div class="dashboard-grid">
+            <div class="dashboard-card">
+                <h3 class="card-title"><i class="fas fa-sun"></i> Solar Flare Activity</h3>
+                <div class="card-value" id="flare-activity">M2.4</div>
+                <div class="card-description">Current solar flare classification. <span class="warning">Moderate activity</span> detected in the past 24 hours.</div>
+            </div>
+            <div class="dashboard-card">
+                <h3 class="card-title"><i class="fas fa-bolt"></i> Geomagnetic Storm</h3>
+                <div class="card-value" id="geomagnetic-storm">G1</div>
+                <div class="card-description">Current geomagnetic storm level. <span class="safe">Minor effects</span> expected on Earth's magnetosphere.</div>
+            </div>
+            <div class="dashboard-card">
+                <h3 class="card-title"><i class="fas fa-shield-alt"></i> Earth's Defense Status</h3>
+                <div class="card-value" id="defense-status">ACTIVE</div>
+                <div class="card-description">All planetary defense systems <span class="safe">operational</span>. No immediate threats detected.</div>
+            </div>
+            <div class="dashboard-card">
+                <h3 class="card-title"><i class="fas fa-satellite"></i> Solar Wind Speed</h3>
+                <div class="card-value" id="solar-wind">412 km/s</div>
+                <div class="card-description">Current solar wind speed measured by DSCOVR satellite at L1 point.</div>
+            </div>
+            <div class="dashboard-card">
+                <h3 class="card-title"><i class="fas fa-radiation"></i> Proton Flux</h3>
+                <div class="card-value" id="proton-flux">3.2 pfu</div>
+                <div class="card-description">>10 MeV proton flux. Below alert threshold of <span class="safe">10 pfu</span>.</div>
+            </div>
+            <div class="dashboard-card">
+                <h3 class="card-title"><i class="fas fa-clock"></i> Next CME Arrival</h3>
+                <div class="card-value" id="cme-arrival">36h</div>
+                <div class="card-description">Estimated time until arrival of coronal mass ejection detected 2 days ago.</div>
+            </div>
+        </div>
+
+        <!-- 3D Solar System Visualization -->
+        <div id="solar-system-container"></div>
+        <div class="visualization-controls">
+            <button class="active" id="view-sun">Sun View</button>
+            <button id="view-earth">Earth View</button>
+            <button id="view-system">Solar System</button>
+            <button id="view-cme">CME Simulation</button>
+        </div>
+        <div class="timeline">
+            <div class="timeline-inner">
+                <div class="timeline-event" style="left: 10%;" data-date="2h ago" data-event="M1.2 Flare"></div>
+                <div class="timeline-event" style="left: 25%;" data-date="6h ago" data-event="CME Detected"></div>
+                <div class="timeline-event" style="left: 45%;" data-date="12h ago" data-event="Solar Wind Increase"></div>
+                <div class="timeline-event" style="left: 65%;" data-date="18h ago" data-event="X-ray Flux Peak"></div>
+                <div class="timeline-event" style="left: 85%;" data-date="24h ago" data-event="Sunspot AR3697"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Prediction Section -->
+    <section id="predictions" class="prediction-section">
+        <div class="prediction-container">
+            <h2 class="section-title">SOLAR STORM PREDICTIONS</h2>
+            <p style="text-align: center; max-width: 800px; margin: 0 auto 50px;">Our advanced AI models analyze solar data to predict potential geomagnetic storms with 92% accuracy up to 72 hours in advance.</p>
+            
+            <div class="prediction-cards">
+                <div class="prediction-card">
+                    <h3>24-Hour Forecast</h3>
+                    <div class="probability">78% Calm</div>
+                    <div class="probability">19% Minor Storm</div>
+                    <div class="probability">3% Severe Storm</div>
+                    <p>Low probability of significant solar activity. Expected solar wind speed between 380-450 km/s.</p>
+                </div>
+                <div class="prediction-card">
+                    <h3>48-Hour Forecast</h3>
+                    <div class="probability">65% Calm</div>
+                    <div class="probability">28% Minor Storm</div>
+                    <div class="probability">7% Severe Storm</div>
+                    <p>Possible arrival of CME from recent M-class flare. Monitoring for potential impacts.</p>
+                </div>
+                <div class="prediction-card">
+                    <h3>72-Hour Forecast</h3>
+                    <div class="probability">54% Calm</div>
+                    <div class="probability">35% Minor Storm</div>
+                    <div class="probability">11% Severe Storm</div>
+                    <p>Increased uncertainty due to developing sunspot region. Potential for X-class flares.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Defense Section -->
+    <section id="defense" class="defense-section">
+        <div class="defense-container">
+            <h2 class="section-title">PLANETARY DEFENSE SYSTEMS</h2>
+            <p style="text-align: center; max-width: 800px; margin: 0 auto 50px;">Our multi-layered defense infrastructure protects Earth's technology and infrastructure from solar storm impacts.</p>
+            
+            <div class="defense-grid">
+                <div class="defense-card">
+                    <h3>Magnetospheric Shield</h3>
+                    <div class="status status-active">ACTIVE</div>
+                    <p>Orbital network of superconducting coils that reinforce Earth's natural magnetic field during solar storms.</p>
+                </div>
+                <div class="defense-card">
+                    <h3>Early Warning Network</h3>
+                    <div class="status status-active">ACTIVE</div>
+                    <p>Fleet of monitoring satellites at Lagrange points providing 30-60 minute warning of incoming CMEs.</p>
+                </div>
+                <div class="defense-card">
+                    <h3>Grid Protection System</h3>
+                    <div class="status status-active">ACTIVE</div>
+                    <p>Automated safeguards for power grids that prevent transformer damage during geomagnetic storms.</p>
+                </div>
+                <div class="defense-card">
+                    <h3>Satellite Hardening</h3>
+                    <div class="status status-active">ACTIVE</div>
+                    <p>Radiation shielding and safe modes for critical satellites during solar particle events.</p>
+                </div>
+                <div class="defense-card">
+                    <h3>Solar Deflector Array</h3>
+                    <div class="status status-development">IN DEVELOPMENT</div>
+                    <p>Experimental system using focused plasma beams to divert incoming CMEs away from Earth.</p>
+                </div>
+                <div class="defense-card">
+                    <h3>AI Prediction Core</h3>
+                    <div class="status status-active">ACTIVE</div>
+                    <p>Neural network analyzing solar data to predict storms with 92% accuracy up to 72 hours in advance.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer id="about">
+        <div class="footer-content">
+            <div class="logo" style="justify-content: center; margin-bottom: 30px;">
+                <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48cGF0aCBmaWxsPSIjMDA5NmZmIiBkPSJNMjU2IDhDMTE5IDggOCAxMTkgOCAyNTZzMTExIDI0OCAyNDggMjQ4IDI0OC0xMTEgMjQ4LTI0OFMzOTMgOCAyNTYgOHptMCA0NDhjLTExMC41IDAtMjAwLTg5LjUtMjAwLTIwMFMxNDUuNSA1NiAyNTYgNTZzMjAwIDg5LjUgMjAwIDIwMC04OS41IDIwMC0yMDAgMjAwWm0xMDEuOC0yNjEuN2wtODQuOS02MS43Yy0zLjEtMi4yLTcuMi0yLjItMTAuMyAwbC04NC5lOTYxLjdjLTMuOSAyLjgtNC4xIDguMi0uNCAxMS4ybDQwLjQgMjkuNGMtMS4xIDMuMy0uNiA3IDEuMiAxMC4ybC0zOC41IDQwLjRjLTIuOCAzLjEtMi40IDcuOS44IDEwLjlsNTkuNSA1OS41YzMuMSAzLjEgOC4yIDMuNiAxMS4yLjdsNDAuNC0zOC41YzMuMyAxLjggNyAxLjkgMTAuMiAxLjJsMjkuNCA0MC40YzIuOCAzLjkgOC4yIDMuNiAxMS4yLS40bDYxLjctODQuOWMzLjEtNC4xIDIuOC0xMC4yLS40LTEzLjNMMzY3IDIwOS44YzEuOS0xLjEgMy4zLTIuOSAzLjctNS4xLjQtMi4yLS4xLTQuNS0xLjQtNi4zbDI5LjQtNDAuNGMyLjgtMy45IDIuNC05LjItMS4yLTEyLjJsLTYxLjctODQuOVoiLz48L3N2Zz4=" alt="Solar Shield Logo" style="height: 30px;">
+                <h1 style="font-size: 1.2rem;">SOLAR SHIELD</h1>
+            </div>
+            <div class="footer-links">
+                <a href="#dashboard">Dashboard</a>
+                <a href="#predictions">Predictions</a>
+                <a href="#defense">Defense</a>
+                <a href="#">Research</a>
+                <a href="#">News</a>
+                <a href="#">Contact</a>
+            </div>
+            <div class="social-links">
+                <a href="#"><i class="fab fa-twitter"></i></a>
+                <a href="#"><i class="fab fa-facebook"></i></a>
+                <a href="#"><i class="fab fa-linkedin"></i></a>
+                <a href="#"><i class="fab fa-youtube"></i></a>
+                <a href="#"><i class="fab fa-github"></i></a>
+            </div>
+            <p class="copyright">© 2023 Solar Storm Defense & Prediction Center. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- Three.js and other scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.min.js"></script>
+    <script>
+        // Remove loading screen when everything is loaded
+        window.addEventListener('load', function() {
+            setTimeout(function() {
+                document.getElementById('loading-screen').style.opacity = '0';
+                setTimeout(function() {
+                    document.getElementById('loading-screen').style.display = 'none';
+                }, 500);
+            }, 1500);
+        });
+
+        // Simulate real-time data updates
+        function updateDashboardData() {
+            const flareClasses = ['A1.2', 'B3.7', 'C5.1', 'M2.4', 'M5.8', 'X1.3'];
+            const stormLevels = ['G1', 'G2', 'G3', 'G4', 'G5'];
+            const windSpeeds = [380, 412, 450, 520, 610];
+            const protonFluxes = [2.1, 3.2, 5.7, 8.9, 12.4];
+            const cmeArrivals = ['36h', '28h', '42h', '15h', '52h'];
+            
+            document.getElementById('flare-activity').textContent = flareClasses[Math.floor(Math.random() * flareClasses.length)];
+            document.getElementById('geomagnetic-storm').textContent = stormLevels[Math.floor(Math.random() * stormLevels.length)];
+            document.getElementById('solar-wind').textContent = windSpeeds[Math.floor(Math.random() * windSpeeds.length)] + ' km/s';
+            document.getElementById('proton-flux').textContent = protonFluxes[Math.floor(Math.random() * protonFluxes.length)] + ' pfu';
+            document.getElementById('cme-arrival').textContent = cmeArrivals[Math.floor(Math.random() * cmeArrivals.length)];
+            
+            // Randomly change status colors for visual interest
+            const statusElements = document.querySelectorAll('.card-value');
+            statusElements.forEach(el => {
+                if (Math.random() > 0.8) {
+                    el.classList.add('pulse');
+                    setTimeout(() => el.classList.remove('pulse'), 2000);
+                }
+            });
+        }
+
+        // Update data every 5 seconds
+        setInterval(updateDashboardData, 5000);
+        updateDashboardData(); // Initial call
+
+        // 3D Earth Visualization
+        let earthScene, earthCamera, earthRenderer, earthMesh;
+        let solarSystemScene, solarSystemCamera, solarSystemRenderer, solarSystemObjects = {};
+        let currentView = 'earth';
+
+        function initEarth() {
+            const container = document.getElementById('earth-container');
+            
+            // Scene
+            earthScene = new THREE.Scene();
+            
+            // Camera
+            earthCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            earthCamera.position.z = 2.5;
+            
+            // Renderer
+            earthRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            earthRenderer.setSize(window.innerWidth, window.innerHeight);
+            container.appendChild(earthRenderer.domElement);
+            
+            // Earth
+            const geometry = new THREE.SphereGeometry(1, 64, 64);
+            const texture = new THREE.TextureLoader().load('https://threejs.org/examples/textures/planets/earth_atmos_2048.jpg');
+            const bumpMap = new THREE.TextureLoader().load('https://threejs.org/examples/textures/planets/earth_normal_2048.jpg');
+            const specularMap = new THREE.TextureLoader().load('https://threejs.org/examples/textures/planets/earth_specular_2048.jpg');
+            
+            const material = new THREE.MeshPhongMaterial({
+                map: texture,
+                bumpMap: bumpMap,
+                bumpScale: 0.05,
+                specularMap: specularMap,
+                specular: new THREE.Color('grey'),
+                shininess: 5
+            });
+            
+            earthMesh = new THREE.Mesh(geometry, material);
+            earthScene.add(earthMesh);
+            
+            // Clouds
+            const cloudGeometry = new THREE.SphereGeometry(1.01, 64, 64);
+            const cloudTexture = new THREE.TextureLoader().load('https://threejs.org/examples/textures/planets/earth_clouds_1024.png');
+            const cloudMaterial = new THREE.MeshPhongMaterial({
+                map: cloudTexture,
+                transparent: true,
+                opacity: 0.4
+            });
+            
+            const cloudMesh = new THREE.Mesh(cloudGeometry, cloudMaterial);
+            earthScene.add(cloudMesh);
+            
+            // Stars
+            const starGeometry = new THREE.BufferGeometry();
+            const starMaterial = new THREE.PointsMaterial({
+                color: 0xffffff,
+                size: 0.05,
+                transparent: true,
+                opacity: 0.8
+            });
+            
+            const starVertices = [];
+            for (let i = 0; i < 10000; i++) {
+                const x = (Math.random() - 0.5) * 2000;
+                const y = (Math.random() - 0.5) * 2000;
+                const z = (Math.random() - 0.5) * 2000;
+                starVertices.push(x, y, z);
+            }
+            
+            starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3));
+            const stars = new THREE.Points(starGeometry, starMaterial);
+            earthScene.add(stars);
+            
+            // Lights
+            const ambientLight = new THREE.AmbientLight(0x333333);
+            earthScene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+            directionalLight.position.set(5, 3, 5);
+            earthScene.add(directionalLight);
+            
+            // Aurora effect
+            const auroraGeometry = new THREE.SphereGeometry(1.1, 64, 64);
+            const auroraMaterial = new THREE.ShaderMaterial({
+                uniforms: {
+                    time: { value: 0 }
+                },
+                vertexShader: `
+                    varying vec2 vUv;
+                    void main() {
+                        vUv = uv;
+                        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                    }
+                `,
+                fragmentShader: `
+                    uniform float time;
+                    varying vec2 vUv;
+                    
+                    void main() {
+                        float intensity = pow(0.5 - distance(vUv, vec2(0.5, 0.1)), 2.0);
+                        vec3 color = mix(vec3(0.0, 0.3, 0.6), vec3(0.0, 0.8, 0.9), intensity * 2.0);
+                        color = mix(color, vec3(0.2, 0.0, 0.8), pow(intensity, 0.5));
+                        gl_FragColor = vec4(color * intensity * 2.0, intensity * 0.8);
+                    }
+                `,
+                transparent: true,
+                blending: THREE.AdditiveBlending,
+                side: THREE.BackSide
+            });
+            
+            const auroraMesh = new THREE.Mesh(auroraGeometry, auroraMaterial);
+            earthScene.add(auroraMesh);
+            
+            // Animation loop
+            function animate() {
+                requestAnimationFrame(animate);
+                
+                earthMesh.rotation.y += 0.001;
+                cloudMesh.rotation.y += 0.0015;
+                auroraMaterial.uniforms.time.value += 0.01;
+                
+                earthRenderer.render(earthScene, earthCamera);
+            }
+            
+            // Handle window resize
+            window.addEventListener('resize', () => {
+                earthCamera.aspect = window.innerWidth / window.innerHeight;
+                earthCamera.updateProjectionMatrix();
+                earthRenderer.setSize(window.innerWidth, window.innerHeight);
+            });
+            
+            animate();
+        }
+
+        // Solar System Visualization
+        function initSolarSystem() {
+            const container = document.getElementById('solar-system-container');
+            
+            // Scene
+            solarSystemScene = new THREE.Scene();
+            
+            // Camera
+            solarSystemCamera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
+            solarSystemCamera.position.set(0, 5, 15);
+            
+            // Renderer
+            solarSystemRenderer = new THREE.WebGLRenderer({ antialias: true });
+            solarSystemRenderer.setSize(container.clientWidth, container.clientHeight);
+            solarSystemRenderer.setClearColor(0x0a0a1a, 1);
+            container.appendChild(solarSystemRenderer.domElement);
+            
+            // Controls
+            const controls = new THREE.OrbitControls(solarSystemCamera, solarSystemRenderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.minDistance = 5;
+            controls.maxDistance = 50;
+            
+            // Sun
+            const sunGeometry = new THREE.SphereGeometry(2, 32, 32);
+            const sunMaterial = new THREE.MeshBasicMaterial({
+                color: 0xffaa44,
+                transparent: true,
+                opacity: 0.9
+            });
+            const sunMesh = new THREE.Mesh(sunGeometry, sunMaterial);
+            solarSystemScene.add(sunMesh);
+            solarSystemObjects.sun = sunMesh;
+            
+            // Sun corona effect
+            const sunCoronaGeometry = new THREE.SphereGeometry(2.2, 32, 32);
+            const sunCoronaMaterial = new THREE.ShaderMaterial({
+                uniforms: {
+                    time: { value: 0 }
+                },
+                vertexShader: `
+                    varying vec3 vNormal;
+                    void main() {
+                        vNormal = normalize(normalMatrix * normal);
+                        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                    }
+                `,
+                fragmentShader: `
+                    uniform float time;
+                    varying vec3 vNormal;
+                    
+                    void main() {
+                        float intensity = pow(0.7 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 2.0);
+                        vec3 color = mix(vec3(1.0, 0.7, 0.3), vec3(1.0, 0.3, 0.1), intensity);
+                        gl_FragColor = vec4(color * intensity * 1.5, intensity * 0.5);
+                    }
+                `,
+                transparent: true,
+                blending: THREE.AdditiveBlending,
+                side: THREE.BackSide
+            });
+            const sunCoronaMesh = new THREE.Mesh(sunCoronaGeometry, sunCoronaMaterial);
+            solarSystemScene.add(sunCoronaMesh);
+            solarSystemObjects.sunCorona = sunCoronaMesh;
+            
+            // Create planets
+            function createPlanet(size, distance, color, textureUrl = null, hasRing = false) {
+                const group = new THREE.Group();
+                const geometry = new THREE.SphereGeometry(size, 32, 32);
+                let material;
+                
+                if (textureUrl) {
+                    const texture = new THREE.TextureLoader().load(textureUrl);
+                    material = new THREE.MeshStandardMaterial({ map: texture });
+                } else {
+                    material = new THREE.MeshStandardMaterial({ color: color });
+                }
+                
+                const mesh = new THREE.Mesh(geometry, material);
+                group.add(mesh);
+                
+                if (hasRing) {
+                    const ringGeometry = new THREE.RingGeometry(size * 1.5, size * 2, 32);
+                    const ringMaterial = new THREE.MeshStandardMaterial({
+                        color: 0xaaaaaa,
+                        side: THREE.DoubleSide
+                    });
+                    const ringMesh = new THREE.Mesh(ringGeometry, ringMaterial);
+                    ringMesh.rotation.x = Math.PI / 2;
+                    group.add(ringMesh);
+                }
+                
+                group.position.x = distance;
+                return { group, mesh };
+            }
+            
+            // Earth
+            const earth = createPlanet(0.5, 7, 0x2233ff, 'https://threejs.org/examples/textures/planets/earth_atmos_2048.jpg');
+            solarSystemScene.add(earth.group);
+            solarSystemObjects.earth = earth;
+            
+            // Add cloud layer to Earth
+            const earthCloudGeometry = new THREE.SphereGeometry(0.51, 32, 32);
+            const earthCloudTexture = new THREE.TextureLoader().load('https://threejs.org/examples/textures/planets/earth_clouds_1024.png');
+            const earthCloudMaterial = new THREE.MeshStandardMaterial({
+                map: earthCloudTexture,
+                transparent: true,
+                opacity: 0.4
+            });
+            const earthCloudMesh = new THREE.Mesh(earthCloudGeometry, earthCloudMaterial);
+            earth.group.add(earthCloudMesh);
+            solarSystemObjects.earthCloud = earthCloudMesh;
+            
+            // Add aurora to Earth
+            const earthAuroraGeometry = new THREE.SphereGeometry(0.52, 32, 32);
+            const earthAuroraMaterial = new THREE.ShaderMaterial({
+                uniforms: {
+                    time: { value: 0 }
+                },
+                vertexShader: `
+                    varying vec2 vUv;
+                    void main() {
+                        vUv = uv;
+                        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                    }
+                `,
+                fragmentShader: `
+                    uniform float time;
+                    varying vec2 vUv;
+                    
+                    void main() {
+                        float intensity = pow(0.5 - distance(vUv, vec2(0.5, 0.1)), 2.0);
+                        vec3 color = mix(vec3(0.0, 0.3, 0.6), vec3(0.0, 0.8, 0.9), intensity * 2.0);
+                        color = mix(color, vec3(0.2, 0.0, 0.8), pow(intensity, 0.5));
+                        gl_FragColor = vec4(color * intensity * 2.0, intensity * 0.8);
+                    }
+                `,
+                transparent: true,
+                blending: THREE.AdditiveBlending,
+                side: THREE.BackSide
+            });
+            const earthAuroraMesh = new THREE.Mesh(earthAuroraGeometry, earthAuroraMaterial);
+            earth.group.add(earthAuroraMesh);
+            solarSystemObjects.earthAurora = earthAuroraMesh;
+            
+            // Mars
+            const mars = createPlanet(0.3, 10, 0xff3300, 'https://threejs.org/examples/textures/planets/mars_1k_color.jpg');
+            solarSystemScene.add(mars.group);
+            solarSystemObjects.mars = mars;
+            
+            // Jupiter
+            const jupiter = createPlanet(1.2, 15, 0xddbb88, 'https://threejs.org/examples/textures/planets/jupiter_2k.jpg');
+            solarSystemScene.add(jupiter.group);
+            solarSystemObjects.jupiter = jupiter;
+            
+            // Saturn
+            const saturn = createPlanet(1.0, 20, 0xddccaa, 'https://threejs.org/examples/textures/planets/saturn_2k.jpg', true);
+            solarSystemScene.add(saturn.group);
+            solarSystemObjects.saturn = saturn;
+            
+            // CME (Coronal Mass Ejection)
+            const cmeParticles = new THREE.BufferGeometry();
+            const cmeParticleCount = 5000;
+            const cmePositions = new Float32Array(cmeParticleCount * 3);
+            const cmeSizes = new Float32Array(cmeParticleCount);
+            
+            for (let i = 0; i < cmeParticleCount; i++) {
+                const i3 = i * 3;
+                // Start particles at sun's surface and expand outward
+                const angle = Math.random() * Math.PI * 2;
+                const distance = Math.random() * 0.5;
+                
+                cmePositions[i3] = Math.cos(angle) * distance;
+                cmePositions[i3 + 1] = Math.sin(angle) * distance;
+                cmePositions[i3 + 2] = (Math.random() - 0.5) * distance;
+                
+                cmeSizes[i] = Math.random() * 0.2 + 0.1;
+            }
+            
+            cmeParticles.setAttribute('position', new THREE.BufferAttribute(cmePositions, 3));
+            cmeParticles.setAttribute('size', new THREE.BufferAttribute(cmeSizes, 1));
+            
+            const cmeMaterial = new THREE.PointsMaterial({
+                color: 0xff6600,
+                size: 0.1,
+                transparent: true,
+                opacity: 0.8,
+                blending: THREE.AdditiveBlending
+            });
+            
+            const cme = new THREE.Points(cmeParticles, cmeMaterial);
+            cme.visible = false;
+            solarSystemScene.add(cme);
+            solarSystemObjects.cme = cme;
+            
+            // Lights
+            const ambientLight = new THREE.AmbientLight(0x333333);
+            solarSystemScene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+            directionalLight.position.set(5, 3, 5);
+            solarSystemScene.add(directionalLight);
+            
+            // Point light for sun
+            const sunLight = new THREE.PointLight(0xffaa44, 2, 50);
+            sunLight.position.set(0, 0, 0);
+            solarSystemScene.add(sunLight);
+            
+            // Stars background
+            const starGeometry = new THREE.BufferGeometry();
+            const starMaterial = new THREE.PointsMaterial({
+                color: 0xffffff,
+                size: 0.1,
+                transparent: true,
+                opacity: 0.8
+            });
+            
+            const starVertices = [];
+            for (let i = 0; i < 10000; i++) {
+                const x = (Math.random() - 0.5) * 2000;
+                const y = (Math.random() - 0.5) * 2000;
+                const z = (Math.random() - 0.5) * 2000;
+                starVertices.push(x, y, z);
+            }
+            
+            starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3));
+            const stars = new THREE.Points(starGeometry, starMaterial);
+            solarSystemScene.add(stars);
+            
+            // Animation loop
+            function animate() {
+                requestAnimationFrame(animate);
+                
+                // Rotate planets
+                if (solarSystemObjects.earth) {
+                    solarSystemObjects.earth.group.rotation.y += 0.01;
+                    solarSystemObjects.earth.mesh.rotation.y += 0.02;
+                    if (solarSystemObjects.earthCloud) solarSystemObjects.earthCloud.rotation.y += 0.025;
+                    if (solarSystemObjects.earthAurora) solarSystemObjects.earthAuroraMaterial.uniforms.time.value += 0.02;
+                }
+                
+                if (solarSystemObjects.mars) {
+                    solarSystemObjects.mars.group.rotation.y += 0.008;
+                    solarSystemObjects.mars.mesh.rotation.y += 0.015;
+                }
+                
+                if (solarSystemObjects.jupiter) {
+                    solarSystemObjects.jupiter.group.rotation.y += 0.005;
+                    solarSystemObjects.jupiter.mesh.rotation.y += 0.01;
+                }
+                
+                if (solarSystemObjects.saturn) {
+                    solarSystemObjects.saturn.group.rotation.y += 0.004;
+                    solarSystemObjects.saturn.mesh.rotation.y += 0.008;
+                }
+                
+                // Animate CME particles
+                if (solarSystemObjects.cme && solarSystemObjects.cme.visible) {
+                    const positions = solarSystemObjects.cme.geometry.attributes.position.array;
+                    for (let i = 0; i < positions.length; i += 3) {
+                        // Move particles outward from sun
+                        positions[i] *= 1.02;
+                        positions[i + 1] *= 1.02;
+                        positions[i + 2] *= 1.02;
+                    }
+                    solarSystemObjects.cme.geometry.attributes.position.needsUpdate = true;
+                    
+                    // Reset particles that have gone too far
+                    if (positions[0] > 15) {
+                        for (let i = 0; i < positions.length; i += 3) {
+                            const angle = Math.random() * Math.PI * 2;
+                            const distance = Math.random() * 0.5;
+                            
+                            positions[i] = Math.cos(angle) * distance;
+                            positions[i + 1] = Math.sin(angle) * distance;
+                            positions[i + 2] = (Math.random() - 0.5) * distance;
+                        }
+                        solarSystemObjects.cme.geometry.attributes.position.needsUpdate = true;
+                    }
+                }
+                
+                // Animate sun corona
+                if (solarSystemObjects.sunCorona) {
+                    solarSystemObjects.sunCorona.material.uniforms.time.value += 0.02;
+                }
+                
+                controls.update();
+                solarSystemRenderer.render(solarSystemScene, solarSystemCamera);
+            }
+            
+            // Handle window resize
+            window.addEventListener('resize', () => {
+                solarSystemCamera.aspect = container.clientWidth / container.clientHeight;
+                solarSystemCamera.updateProjectionMatrix();
+                solarSystemRenderer.setSize(container.clientWidth, container.clientHeight);
+            });
+            
+            // View controls
+            document.getElementById('view-sun').addEventListener('click', () => {
+                currentView = 'sun';
+                solarSystemCamera.position.set(0, 5, 15);
+                solarSystemObjects.cme.visible = false;
+            });
+            
+            document.getElementById('view-earth').addEventListener('click', () => {
+                currentView = 'earth';
+                solarSystemCamera.position.set(7, 2, 5);
+                solarSystemObjects.cme.visible = false;
+            });
+            
+            document.getElementById('view-system').addEventListener('click', () => {
+                currentView = 'system';
+                solarSystemCamera.position.set(0, 20, 30);
+                solarSystemCamera.lookAt(0, 0, 0);
+                solarSystemObjects.cme.visible = false;
+            });
+            
+            document.getElementById('view-cme').addEventListener('click', () => {
+                currentView = 'cme';
+                solarSystemCamera.position.set(0, 5, 15);
+                solarSystemObjects.cme.visible = true;
+                
+                // Reset CME particles
+                const positions = solarSystemObjects.cme.geometry.attributes.position.array;
+                for (let i = 0; i < positions.length; i += 3) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const distance = Math.random() * 0.5;
+                    
+                    positions[i] = Math.cos(angle) * distance;
+                    positions[i + 1] = Math.sin(angle) * distance;
+                    positions[i + 2] = (Math.random() - 0.5) * distance;
+                }
+                solarSystemObjects.cme.geometry.attributes.position.needsUpdate = true;
+            });
+            
+            // Set active button style
+            const viewButtons = document.querySelectorAll('.visualization-controls button');
+            viewButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    viewButtons.forEach(btn => btn.classList.remove('active'));
+                    button.classList.add('active');
+                });
+            });
+            
+            animate();
+        }
+
+        // Initialize all visualizations when page loads
+        window.addEventListener('load', () => {
+            initEarth();
+            initSolarSystem();
+            
+            // Smooth scrolling for navigation
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    document.querySelector(this.getAttribute('href')).scrollIntoView({
+                        behavior: 'smooth'
+                    });
+                });
+            });
+        });
+
+        // Simulate solar storm alert
+        function simulateStormAlert() {
+            if (Math.random() > 0.95) { // 5% chance of triggering an alert
+                const alertCard = document.createElement('div');
+                alertCard.className = 'dashboard-card pulse';
+                alertCard.style.position = 'fixed';
+                alertCard.style.bottom = '20px';
+                alertCard.style.right = '20px';
+                alertCard.style.zIndex = '1000';
+                alertCard.style.maxWidth = '400px';
+                alertCard.style.animation = 'pulse 0.5s infinite';
+                alertCard.innerHTML = `
+                    <h3 class="card-title"><i class="fas fa-exclamation-triangle"></i> SOLAR STORM ALERT</h3>
+                    <div class="card-value alert">X-CLASS FLARE DETECTED</div>
+                    <div class="card-description">A powerful X-class solar flare has been detected. CME expected to reach Earth in 24-36 hours. Potential for G3-G5 geomagnetic storm.</div>
+                    <button class="cta-button" style="margin-top: 10px; padding: 8px 15px; font-size: 0.9rem;">VIEW DETAILS</button>
+                `;
+                
+                document.body.appendChild(alertCard);
+                
+                setTimeout(() => {
+                    alertCard.style.animation = 'none';
+                    setTimeout(() => {
+                        alertCard.style.opacity = '0';
+                        setTimeout(() => {
+                            document.body.removeChild(alertCard);
+                        }, 500);
+                    }, 5000);
+                }, 10000);
+            }
+        }
+
+        // Random storm alerts every 30 seconds
+        setInterval(simulateStormAlert, 30000);
+    </script>
+</body>
+</html>

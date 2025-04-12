@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cosmic Dark Matter Explorer</title>
+    <style>
+        body { 
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Arial', sans-serif;
+            color: white;
+        }
+        #info {
+            position: absolute;
+            top: 10px;
+            width: 100%;
+            text-align: center;
+            z-index: 100;
+            display: block;
+            background-color: rgba(0,0,0,0.5);
+            padding: 10px;
+            border-radius: 5px;
+        }
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background-color: rgba(0,0,0,0.7);
+            padding: 15px;
+            border-radius: 10px;
+            max-width: 300px;
+        }
+        button {
+            background: #4a4a8a;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        button:hover {
+            background: #6a6aaa;
+        }
+        input[type="range"] {
+            width: 100%;
+            margin: 10px 0;
+        }
+        .slider-container {
+            margin: 10px 0;
+        }
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+        }
+        h1 {
+            margin-top: 0;
+            color: #aaccff;
+        }
+        a {
+            color: #88bbff;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div id="info">
+        <h1>Dark Matter Cosmic Web Explorer</h1>
+        <p>Visualizing the invisible structure of the universe | <a href="#" id="toggleHelp">Help</a></p>
+        <div id="helpPanel" style="display: none; margin-top: 10px; text-align: left; max-width: 600px; margin-left: auto; margin-right: auto;">
+            <p>This visualization shows a simulated dark matter distribution in our universe. Dark matter doesn't emit light but its gravitational effects shape the cosmic web.</p>
+            <p><strong>Controls:</strong> Left-click and drag to rotate, right-click and drag to pan, scroll to zoom.</p>
+            <p><strong>View Options:</strong> Toggle between particle view and density visualization below.</p>
+        </div>
+    </div>
+    
+    <div id="controls">
+        <h3>Visualization Controls</h3>
+        
+        <div class="slider-container">
+            <div class="slider-label">
+                <label for="particleSize">Particle Size</label>
+                <span id="particleSizeValue">2.0</span>
+            </div>
+            <input type="range" id="particleSize" min="0.1" max="5" step="0.1" value="2.0">
+        </div>
+        
+        <div class="slider-container">
+            <div class="slider-label">
+                <label for="brightness">Brightness</label>
+                <span id="brightnessValue">1.0</span>
+            </div>
+            <input type="range" id="brightness" min="0.1" max="2" step="0.1" value="1.0">
+        </div>
+        
+        <div class="slider-container">
+            <div class="slider-label">
+                <label for="densityThreshold">Density Threshold</label>
+                <span id="densityThresholdValue">0.5</span>
+            </div>
+            <input type="range" id="densityThreshold" min="0" max="1" step="0.05" value="0.5">
+        </div>
+        
+        <button id="toggleView">Switch to Density View</button>
+        <button id="resetCamera">Reset View</button>
+        <button id="animateToggle">Start Animation</button>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
+    <script>
+        // Main Three.js variables
+        let scene, camera, renderer, controls;
+        let darkMatterParticles, darkMatterDensity;
+        let isParticleView = true;
+        let isAnimating = false;
+        let animationFrameId = null;
+        
+        // UI elements
+        const toggleViewBtn = document.getElementById('toggleView');
+        const resetCameraBtn = document.getElementById('resetCamera');
+        const animateToggleBtn = document.getElementById('animateToggle');
+        const particleSizeSlider = document.getElementById('particleSize');
+        const brightnessSlider = document.getElementById('brightness');
+        const densityThresholdSlider = document.getElementById('densityThreshold');
+        const toggleHelpBtn = document.getElementById('toggleHelp');
+        const helpPanel = document.getElementById('helpPanel');
+        
+        // Initialize the scene
+        function init() {
+            // Create scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x000010);
+            
+            // Setup camera
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 50;
+            
+            // Setup renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+            
+            // Add controls
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            
+            // Create dark matter particles
+            createDarkMatterParticles();
+            createDarkMatterDensity();
+            
+            // Set initial view
+            toggleView();
+            
+            // Event listeners
+            window.addEventListener('resize', onWindowResize);
+            toggleViewBtn.addEventListener('click', toggleView);
+            resetCameraBtn.addEventListener('click', resetCamera);
+            animateToggleBtn.addEventListener('click', toggleAnimation);
+            toggleHelpBtn.addEventListener('click', toggleHelp);
+            
+            // Slider events
+            particleSizeSlider.addEventListener('input', updateParticleSize);
+            brightnessSlider.addEventListener('input', updateBrightness);
+            densityThresholdSlider.addEventListener('input', updateDensityThreshold);
+            
+            // Start animation loop
+            animate();
+        }
+        
+        // Create random dark matter particles
+        function createDarkMatterParticles() {
+            const particleCount = 5000;
+            const particles = new THREE.BufferGeometry();
+            const positions = new Float32Array(particleCount * 3);
+            const colors = new Float32Array(particleCount * 3);
+            const sizes = new Float32Array(particleCount);
+            
+            // Create a cosmic web-like structure
+            for (let i = 0; i < particleCount; i++) {
+                // Position particles in filaments
+                let x, y, z;
+                
+                // Create clusters and filaments
+                if (Math.random() < 0.3) {
+                    // Cluster
+                    const clusterRadius = 5 + Math.random() * 5;
+                    const theta = Math.random() * Math.PI * 2;
+                    const phi = Math.random() * Math.PI;
+                    const radius = Math.random() * clusterRadius;
+                    
+                    x = Math.sin(phi) * Math.cos(theta) * radius;
+                    y = Math.sin(phi) * Math.sin(theta) * radius;
+                    z = Math.cos(phi) * radius;
+                    
+                    // Position clusters in space
+                    if (Math.random() < 0.5) x += 20;
+                    if (Math.random() < 0.5) x -= 20;
+                    if (Math.random() < 0.5) y += 20;
+                    if (Math.random() < 0.5) y -= 20;
+                    if (Math.random() < 0.5) z += 20;
+                    if (Math.random() < 0.5) z -= 20;
+                } else {
+                    // Filament
+                    const axis = Math.floor(Math.random() * 3);
+                    const length = 30 + Math.random() * 20;
+                    const thickness = 1 + Math.random() * 3;
+                    
+                    if (axis === 0) {
+                        x = (Math.random() - 0.5) * length;
+                        y = (Math.random() - 0.5) * thickness;
+                        z = (Math.random() - 0.5) * thickness;
+                    } else if (axis === 1) {
+                        x = (Math.random() - 0.5) * thickness;
+                        y = (Math.random() - 0.5) * length;
+                        z = (Math.random() - 0.5) * thickness;
+                    } else {
+                        x = (Math.random() - 0.5) * thickness;
+                        y = (Math.random() - 0.5) * thickness;
+                        z = (Math.random() - 0.5) * length;
+                    }
+                }
+                
+                positions[i * 3] = x;
+                positions[i * 3 + 1] = y;
+                positions[i * 3 + 2] = z;
+                
+                // Color based on position (for visual effect)
+                colors[i * 3] = 0.5 + 0.5 * (x / 40); // R
+                colors[i * 3 + 1] = 0.5 + 0.5 * (y / 40); // G
+                colors[i * 3 + 2] = 0.7 + 0.3 * (z / 40); // B
+                
+                sizes[i] = 2.0;
+            }
+            
+            particles.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            particles.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+            particles.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+            
+            const particleMaterial = new THREE.PointsMaterial({
+                size: 2.0,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.8,
+                sizeAttenuation: true
+            });
+            
+            darkMatterParticles = new THREE.Points(particles, particleMaterial);
+            scene.add(darkMatterParticles);
+        }
+        
+        // Create density visualization
+        function createDarkMatterDensity() {
+            // In a real implementation, this would use actual density data
+            // For this demo, we'll create a simple grid with density values
+            
+            const size = 32;
+            const halfSize = size / 2;
+            const densityData = new Float32Array(size * size * size);
+            
+            // Fill with noise
+            for (let i = 0; i < size; i++) {
+                for (let j = 0; j < size; j++) {
+                    for (let k = 0; k < size; k++) {
+                        // Base noise
+                        let value = Math.random() * 0.2;
+                        
+                        // Add clusters
+                        const distToCenter = Math.sqrt(
+                            Math.pow((i - halfSize) / halfSize, 2) +
+                            Math.pow((j - halfSize) / halfSize, 2) +
+                            Math.pow((k - halfSize) / halfSize, 2)
+                        );
+                        
+                        if (distToCenter < 0.8) {
+                            value += (0.8 - distToCenter) * 0.5;
+                        }
+                        
+                        // Add filaments
+                        if (Math.abs(i - j) < 3 || Math.abs(j - k) < 3 || Math.abs(i - k) < 3) {
+                            value += 0.3;
+                        }
+                        
+                        densityData[i * size * size + j * size + k] = Math.min(1, value);
+                    }
+                }
+            }
+            
+            // Create texture
+            const densityTexture = new THREE.DataTexture3D(
+                densityData, size, size, size
+            );
+            densityTexture.format = THREE.RedFormat;
+            densityTexture.type = THREE.FloatType;
+            densityTexture.minFilter = THREE.LinearFilter;
+            densityTexture.magFilter = THREE.LinearFilter;
+            densityTexture.unpackAlignment = 1;
+            densityTexture.needsUpdate = true;
+            
+            // Create volume material
+            const volumeMaterial = new THREE.ShaderMaterial({
+                uniforms: {
+                    u_size: { value: new THREE.Vector3(size, size, size) },
+                    u_data: { value: densityTexture },
+                    u_clim: { value: new THREE.Vector2(0, 1) },
+                    u_renderstyle: { value: 0 },
+                    u_renderthreshold: { value: 0.5 },
+                    u_cmdata: { value: getTransferFunctionTexture() }
+                },
+                vertexShader: `
+                    varying vec4 vPosition;
+                    varying vec3 vNormal;
+                    
+                    void main() {
+                        vPosition = modelViewMatrix * vec4(position, 1.0);
+                        vNormal = normalize(normalMatrix * normal);
+                        gl_Position = projectionMatrix * vPosition;
+                    }
+                `,
+                fragmentShader: `
+                    uniform sampler2D u_cmdata;
+                    uniform sampler3D u_data;
+                    uniform vec3 u_size;
+                    uniform vec2 u_clim;
+                    uniform float u_renderthreshold;
+                    
+                    varying vec4 vPosition;
+                    varying vec3 vNormal;
+                    
+                    void main() {
+                        // Calculate 3D texture coordinates
+                        vec3 texcoord = (vPosition.xyz + vec3(16.0)) / 32.0;
+                        
+                        if (any(lessThan(texcoord, vec3(0.0))) discard;
+                        if (any(greaterThan(texcoord, vec3(1.0)))) discard;
+                        
+                        // Get density value
+                        float value = texture(u_data, texcoord).r;
+                        value = (value - u_clim.x) / (u_clim.y - u_clim.x);
+                        
+                        if (value < u_renderthreshold) discard;
+                        
+                        // Apply color map
+                        vec4 col = texture(u_cmdata, vec2(value, 0.5));
+                        
+                        // Simple lighting
+                        vec3 lightDir = normalize(vec3(1.0, 1.0, 1.0));
+                        float light = max(0.0, dot(vNormal, lightDir)) * 0.7 + 0.3;
+                        
+                        gl_FragColor = vec4(col.rgb * light, col.a);
+                    }
+                `,
+                side: THREE.DoubleSide,
+                transparent: true
+            });
+            
+            // Create volume mesh
+            const volumeGeometry = new THREE.BoxGeometry(32, 32, 32);
+            darkMatterDensity = new THREE.Mesh(volumeGeometry, volumeMaterial);
+            darkMatterDensity.visible = false;
+            scene.add(darkMatterDensity);
+        }
+        
+        // Create a color map texture
+        function getTransferFunctionTexture() {
+            const width = 256;
+            const height = 1;
+            const data = new Uint8Array(width * height * 4);
+            
+            for (let i = 0; i < width; i++) {
+                const t = i / width;
+                
+                // Purple to blue to cyan colormap
+                const r = Math.min(1, Math.sin(t * Math.PI) * 1.5);
+                const g = Math.min(1, Math.pow(t, 2) * 1.2);
+                const b = 0.5 + t * 0.5;
+                
+                data[i * 4] = r * 255;
+                data[i * 4 + 1] = g * 255;
+                data[i * 4 + 2] = b * 255;
+                data[i * 4 + 3] = t * 255;
+            }
+            
+            const texture = new THREE.DataTexture(
+                data, width, height,
+                THREE.RGBAFormat, THREE.UnsignedByteType
+            );
+            texture.needsUpdate = true;
+            return texture;
+        }
+        
+        // Toggle between particle and density view
+        function toggleView() {
+            isParticleView = !isParticleView;
+            
+            if (isParticleView) {
+                darkMatterParticles.visible = true;
+                darkMatterDensity.visible = false;
+                toggleViewBtn.textContent = 'Switch to Density View';
+            } else {
+                darkMatterParticles.visible = false;
+                darkMatterDensity.visible = true;
+                toggleViewBtn.textContent = 'Switch to Particle View';
+            }
+        }
+        
+        // Reset camera position
+        function resetCamera() {
+            camera.position.set(0, 0, 50);
+            controls.reset();
+        }
+        
+        // Toggle animation
+        function toggleAnimation() {
+            isAnimating = !isAnimating;
+            animateToggleBtn.textContent = isAnimating ? 'Stop Animation' : 'Start Animation';
+        }
+        
+        // Toggle help panel
+        function toggleHelp() {
+            helpPanel.style.display = helpPanel.style.display === 'none' ? 'block' : 'none';
+        }
+        
+        // Update particle size
+        function updateParticleSize() {
+            const size = parseFloat(particleSizeSlider.value);
+            darkMatterParticles.material.size = size;
+            document.getElementById('particleSizeValue').textContent = size.toFixed(1);
+        }
+        
+        // Update brightness
+        function updateBrightness() {
+            const brightness = parseFloat(brightnessSlider.value);
+            renderer.toneMappingExposure = brightness;
+            document.getElementById('brightnessValue').textContent = brightness.toFixed(1);
+        }
+        
+        // Update density threshold
+        function updateDensityThreshold() {
+            const threshold = parseFloat(densityThresholdSlider.value);
+            darkMatterDensity.material.uniforms.u_renderthreshold.value = threshold;
+            document.getElementById('densityThresholdValue').textContent = threshold.toFixed(2);
+        }
+        
+        // Handle window resize
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        
+        // Animation loop
+        function animate() {
+            animationFrameId = requestAnimationFrame(animate);
+            
+            if (isAnimating) {
+                darkMatterParticles.rotation.y += 0.002;
+                darkMatterDensity.rotation.y += 0.002;
+            }
+            
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        
+        // Clean up on exit
+        function cleanup() {
+            cancelAnimationFrame(animationFrameId);
+            window.removeEventListener('resize', onWindowResize);
+        }
+        
+        // Initialize when page loads
+        window.onload = init;
+        window.onbeforeunload = cleanup;
+    </script>
+</body>
+</html>

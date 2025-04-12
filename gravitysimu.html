@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cosmic Gravity Simulator</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Arial', sans-serif;
+            color: white;
+        }
+        #info {
+            position: absolute;
+            top: 10px;
+            width: 100%;
+            text-align: center;
+            z-index: 100;
+            display: block;
+            background-color: rgba(0,0,0,0.7);
+            padding: 10px;
+            border-radius: 5px;
+        }
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background-color: rgba(0,0,0,0.7);
+            padding: 15px;
+            border-radius: 10px;
+            max-width: 300px;
+        }
+        #planet-info {
+            position: absolute;
+            top: 80px;
+            right: 20px;
+            background-color: rgba(0,0,0,0.7);
+            padding: 15px;
+            border-radius: 10px;
+            width: 250px;
+        }
+        button {
+            background: #4a4a8a;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        button:hover {
+            background: #6a6aaa;
+        }
+        select {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border-radius: 5px;
+            background: #333;
+            color: white;
+            border: 1px solid #555;
+        }
+        .slider-container {
+            margin: 10px 0;
+        }
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+        h1, h2, h3 {
+            margin-top: 0;
+            color: #aaccff;
+        }
+        .data-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+        }
+        .data-label {
+            font-weight: bold;
+            color: #88bbff;
+        }
+        .data-value {
+            color: #ffffff;
+        }
+        #velocity-display {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background-color: rgba(0,0,0,0.7);
+            padding: 15px;
+            border-radius: 10px;
+            width: 200px;
+        }
+        #height-display {
+            position: absolute;
+            top: 150px;
+            left: 20px;
+            background-color: rgba(0,0,0,0.7);
+            padding: 15px;
+            border-radius: 10px;
+            width: 200px;
+        }
+        #object-controls {
+            position: absolute;
+            top: 400px;
+            left: 20px;
+            background-color: rgba(0,0,0,0.7);
+            padding: 15px;
+            border-radius: 10px;
+            width: 250px;
+        }
+        .impact-effect {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            background: radial-gradient(circle, rgba(255,100,0,0.8) 0%, rgba(255,50,0,0) 70%);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s, transform 0.5s;
+        }
+    </style>
+</head>
+<body>
+    <div id="info">
+        <h1>Cosmic Gravity Simulator</h1>
+        <p>Experience free-fall on different celestial bodies | <span id="simulation-status">Ready</span></p>
+    </div>
+    
+    <div id="planet-info">
+        <h3 id="current-planet">Earth</h3>
+        <div class="data-row">
+            <span class="data-label">Gravity:</span>
+            <span class="data-value" id="gravity-value">9.81 m/s²</span>
+        </div>
+        <div class="data-row">
+            <span class="data-label">Diameter:</span>
+            <span class="data-value" id="diameter-value">12,742 km</span>
+        </div>
+        <div class="data-row">
+            <span class="data-label">Mass:</span>
+            <span class="data-value" id="mass-value">5.97 × 10²⁴ kg</span>
+        </div>
+        <div class="data-row">
+            <span class="data-label">Escape Velocity:</span>
+            <span class="data-value" id="escape-velocity-value">11.19 km/s</span>
+        </div>
+    </div>
+    
+    <div id="controls">
+        <h3>Simulation Controls</h3>
+        <select id="planet-selector">
+            <option value="earth">Earth</option>
+            <option value="mercury">Mercury</option>
+            <option value="venus">Venus</option>
+            <option value="mars">Mars</option>
+            <option value="jupiter">Jupiter</option>
+            <option value="saturn">Saturn</option>
+            <option value="uranus">Uranus</option>
+            <option value="neptune">Neptune</option>
+            <option value="pluto">Pluto</option>
+            <option value="moon">Moon</option>
+            <option value="sun">Sun</option>
+        </select>
+        
+        <div class="slider-container">
+            <div class="slider-label">
+                <label for="height">Drop Height (m)</label>
+                <span id="height-value">100</span>
+            </div>
+            <input type="range" id="height" min="10" max="1000" step="10" value="100">
+        </div>
+        
+        <button id="start-btn">Start Free Fall</button>
+        <button id="reset-btn">Reset Simulation</button>
+        <button id="orbit-btn">Enter Orbit</button>
+    </div>
+    
+    <div id="object-controls">
+        <h3>Falling Object</h3>
+        <select id="object-selector">
+            <option value="person">Person</option>
+            <option value="meteor">Meteor</option>
+            <option value="spaceship">Spaceship</option>
+            <option value="satellite">Satellite</option>
+            <option value="rock">Rock</option>
+            <option value="feather">Feather</option>
+        </select>
+        
+        <div class="slider-container">
+            <div class="slider-label">
+                <label for="object-size">Object Size</label>
+                <span id="object-size-value">1.0</span>
+            </div>
+            <input type="range" id="object-size" min="0.1" max="5" step="0.1" value="1.0">
+        </div>
+        
+        <button id="drop-object-btn">Drop Object</button>
+    </div>
+    
+    <div id="height-display">
+        <h3>Altitude</h3>
+        <div class="data-row">
+            <span class="data-label">Current:</span>
+            <span class="data-value" id="current-height">100.00 m</span>
+        </div>
+        <div class="data-row">
+            <span class="data-label">Time:</span>
+            <span class="data-value" id="fall-time">0.00 s</span>
+        </div>
+    </div>
+    
+    <div id="velocity-display">
+        <h3>Velocity</h3>
+        <div class="data-row">
+            <span class="data-label">Current:</span>
+            <span class="data-value" id="current-velocity">0.00 m/s</span>
+        </div>
+        <div class="data-row">
+            <span class="data-label">Max:</span>
+            <span class="data-value" id="max-velocity">0.00 m/s</span>
+        </div>
+        <div class="data-row">
+            <span class="data-label">Energy:</span>
+            <span class="data-value" id="energy-value">0.00 J</span>
+        </div>
+    </div>
+
+    <div id="impact-effect" class="impact-effect"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
+    <script>
+        // Main Three.js variables
+        let scene, camera, renderer, controls;
+        let planetMesh, fallingObject, surfaceMesh;
+        let planetRadius = 6.371; // Earth radius in Three.js units (1 unit = 1000km)
+        let planetData = {};
+        let isSimulating = false;
+        let startTime = 0;
+        let fallTime = 0;
+        let maxVelocity = 0;
+        let dropHeight = 100;
+        let currentPlanet = 'earth';
+        let personHeight = 1.8; // Average person height in meters
+        
+        // Physics variables
+        let gravity = 9.81;
+        let velocity = 0;
+        let position = 0;
+        let lastTimestamp = 0;
+        let animationFrameId = null;
+        let objectMass = 70; // kg (average person)
+        let dragCoefficient = 0.5;
+        let crossSectionalArea = 0.7; // m²
+        let airDensity = 1.225; // kg/m³ (Earth sea level)
+        let currentObjectType = 'person';
+        let objectSize = 1.0;
+        
+        // DOM elements
+        const planetSelector = document.getElementById('planet-selector');
+        const startBtn = document.getElementById('start-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const orbitBtn = document.getElementById('orbit-btn');
+        const heightSlider = document.getElementById('height');
+        const heightValue = document.getElementById('height-value');
+        const currentHeightDisplay = document.getElementById('current-height');
+        const currentVelocityDisplay = document.getElementById('current-velocity');
+        const maxVelocityDisplay = document.getElementById('max-velocity');
+        const fallTimeDisplay = document.getElementById('fall-time');
+        const simulationStatus = document.getElementById('simulation-status');
+        const currentPlanetDisplay = document.getElementById('current-planet');
+        const gravityValue = document.getElementById('gravity-value');
+        const diameterValue = document.getElementById('diameter-value');
+        const massValue = document.getElementById('mass-value');
+        const escapeVelocityValue = document.getElementById('escape-velocity-value');
+        const objectSelector = document.getElementById('object-selector');
+        const objectSizeSlider = document.getElementById('object-size');
+        const objectSizeValue = document.getElementById('object-size-value');
+        const dropObjectBtn = document.getElementById('drop-object-btn');
+        const energyValue = document.getElementById('energy-value');
+        const impactEffect = document.getElementById('impact-effect');
+        
+        // Planet data (gravity in m/s², diameter in km, mass in kg, escape velocity in km/s)
+        const planetInfo = {
+            earth: { name: 'Earth', gravity: 9.81, diameter: 12742, mass: '5.97 × 10²⁴', escapeVelocity: 11.19, color: 0x1a73e8, atmosphere: true },
+            mercury: { name: 'Mercury', gravity: 3.7, diameter: 4879, mass: '3.30 × 10²³', escapeVelocity: 4.25, color: 0xb3b3b3, atmosphere: false },
+            venus: { name: 'Venus', gravity: 8.87, diameter: 12104, mass: '4.87 × 10²⁴', escapeVelocity: 10.36, color: 0xe6b800, atmosphere: true },
+            mars: { name: 'Mars', gravity: 3.71, diameter: 6779, mass: '6.39 × 10²³', escapeVelocity: 5.03, color: 0xc1440e, atmosphere: true },
+            jupiter: { name: 'Jupiter', gravity: 24.79, diameter: 139820, mass: '1.90 × 10²⁷', escapeVelocity: 59.5, color: 0xe3a857, atmosphere: true },
+            saturn: { name: 'Saturn', gravity: 10.44, diameter: 116460, mass: '5.68 × 10²⁶', escapeVelocity: 35.5, color: 0xf5e3a9, atmosphere: true },
+            uranus: { name: 'Uranus', gravity: 8.69, diameter: 50724, mass: '8.68 × 10²⁵', escapeVelocity: 21.3, color: 0x66ccff, atmosphere: true },
+            neptune: { name: 'Neptune', gravity: 11.15, diameter: 49244, mass: '1.02 × 10²⁶', escapeVelocity: 23.5, color: 0x3366ff, atmosphere: true },
+            pluto: { name: 'Pluto', gravity: 0.62, diameter: 2376, mass: '1.31 × 10²²', escapeVelocity: 1.21, color: 0xcc9966, atmosphere: false },
+            moon: { name: 'Moon', gravity: 1.62, diameter: 3475, mass: '7.35 × 10²²', escapeVelocity: 2.38, color: 0xcccccc, atmosphere: false },
+            sun: { name: 'Sun', gravity: 274, diameter: 1392700, mass: '1.99 × 10³⁰', escapeVelocity: 617.5, color: 0xff4500, atmosphere: false }
+        };
+        
+        // Object data (mass in kg, drag coefficient, cross-sectional area in m²)
+        const objectInfo = {
+            person: { name: 'Person', mass: 70, drag: 1.0, area: 0.7, color: 0x4455ff },
+            meteor: { name: 'Meteor', mass: 5000, drag: 0.3, area: 2.0, color: 0xcc3300 },
+            spaceship: { name: 'Spaceship', mass: 2000, drag: 0.8, area: 10.0, color: 0x999999 },
+            satellite: { name: 'Satellite', mass: 1000, drag: 0.5, area: 5.0, color: 0x66ccff },
+            rock: { name: 'Rock', mass: 50, drag: 0.4, area: 0.1, color: 0x996633 },
+            feather: { name: 'Feather', mass: 0.01, drag: 1.2, area: 0.05, color: 0xffffff }
+        };
+        
+        // Initialize the scene
+        function init() {
+            // Create scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x000033);
+            
+            // Add ambient light
+            const ambientLight = new THREE.AmbientLight(0x404040);
+            scene.add(ambientLight);
+            
+            // Add directional light
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+            directionalLight.position.set(1, 1, 1);
+            scene.add(directionalLight);
+            
+            // Setup camera
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 0, 20);
+            
+            // Setup renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+            
+            // Add controls
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.minDistance = planetRadius * 1.1;
+            controls.maxDistance = planetRadius * 10;
+            
+            // Create stars background
+            createStars();
+            
+            // Create initial planet (Earth)
+            createPlanet('earth');
+            
+            // Create initial falling object (person)
+            createFallingObject('person');
+            
+            // Event listeners
+            window.addEventListener('resize', onWindowResize);
+            startBtn.addEventListener('click', startFreeFall);
+            resetBtn.addEventListener('click', resetSimulation);
+            orbitBtn.addEventListener('click', enterOrbit);
+            planetSelector.addEventListener('change', changePlanet);
+            heightSlider.addEventListener('input', updateHeight);
+            objectSelector.addEventListener('change', changeObject);
+            objectSizeSlider.addEventListener('input', updateObjectSize);
+            dropObjectBtn.addEventListener('click', dropObject);
+            
+            // Start animation loop
+            animate();
+        }
+        
+        // Create stars background
+        function createStars() {
+            const starsGeometry = new THREE.BufferGeometry();
+            const starsMaterial = new THREE.PointsMaterial({
+                color: 0xffffff,
+                size: 0.1,
+                transparent: true,
+                opacity: 0.8
+            });
+            
+            const starsVertices = [];
+            for (let i = 0; i < 10000; i++) {
+                const x = (Math.random() - 0.5) * 2000;
+                const y = (Math.random() - 0.5) * 2000;
+                const z = (Math.random() - 0.5) * 2000;
+                starsVertices.push(x, y, z);
+            }
+            
+            starsGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starsVertices, 3));
+            const stars = new THREE.Points(starsGeometry, starsMaterial);
+            scene.add(stars);
+        }
+        
+        // Create planet
+        function createPlanet(planetKey) {
+            // Remove existing planet if present
+            if (planetMesh) {
+                scene.remove(planetMesh);
+                scene.remove(surfaceMesh);
+            }
+            
+            currentPlanet = planetKey;
+            const planet = planetInfo[planetKey];
+            
+            // Update planet data
+            planetData = planet;
+            planetRadius = planet.diameter / 2000; // Scale diameter to Three.js units
+            
+            // Create planet mesh
+            const geometry = new THREE.SphereGeometry(planetRadius, 64, 64);
+            const material = new THREE.MeshPhongMaterial({
+                color: planet.color,
+                specular: 0x111111,
+                shininess: 30
+            });
+            planetMesh = new THREE.Mesh(geometry, material);
+            scene.add(planetMesh);
+            
+            // Create surface reference (for object positioning)
+            const surfaceGeometry = new THREE.SphereGeometry(planetRadius + 0.01, 64, 64);
+            surfaceMesh = new THREE.Mesh(surfaceGeometry);
+            surfaceMesh.visible = false;
+            scene.add(surfaceMesh);
+            
+            // Update UI with planet info
+            updatePlanetInfo();
+            
+            // Reset camera position
+            resetCamera();
+        }
+        
+        // Create falling object
+        function createFallingObject(objectType) {
+            // Remove existing object if present
+            if (fallingObject) {
+                scene.remove(fallingObject);
+                // Remove any trail if exists
+                if (fallingObject.trail) {
+                    scene.remove(fallingObject.trail);
+                }
+            }
+            
+            currentObjectType = objectType;
+            const objectData = objectInfo[objectType];
+            objectMass = objectData.mass;
+            dragCoefficient = objectData.drag;
+            crossSectionalArea = objectData.area * objectSize;
+            
+            const group = new THREE.Group();
+            
+            // Create different objects based on type
+            switch(objectType) {
+                case 'person':
+                    createPersonModel(group);
+                    break;
+                case 'meteor':
+                    createMeteorModel(group);
+                    break;
+                case 'spaceship':
+                    createSpaceshipModel(group);
+                    break;
+                case 'satellite':
+                    createSatelliteModel(group);
+                    break;
+                case 'rock':
+                    createRockModel(group);
+                    break;
+                case 'feather':
+                    createFeatherModel(group);
+                    break;
+                default:
+                    createPersonModel(group);
+            }
+            
+            // Scale the object
+            group.scale.set(objectSize, objectSize, objectSize);
+            
+            fallingObject = group;
+            
+            // Position object on surface
+            positionObjectOnSurface(dropHeight);
+            scene.add(fallingObject);
+        }
+        
+        // Create person model
+        function createPersonModel(group) {
+            // Head
+            const headGeometry = new THREE.SphereGeometry(0.1, 16, 16);
+            const headMaterial = new THREE.MeshBasicMaterial({ color: 0xffccaa });
+            const head = new THREE.Mesh(headGeometry, headMaterial);
+            head.position.y = 0.9;
+            group.add(head);
+            
+            // Body
+            const bodyGeometry = new THREE.CylinderGeometry(0.05, 0.05, 0.8, 8);
+            const bodyMaterial = new THREE.MeshBasicMaterial({ color: 0x4455ff });
+            const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+            body.position.y = 0.4;
+            group.add(body);
+            
+            // Arms
+            const armGeometry = new THREE.CylinderGeometry(0.03, 0.03, 0.6, 8);
+            const armMaterial = new THREE.MeshBasicMaterial({ color: 0xffccaa });
+            
+            const leftArm = new THREE.Mesh(armGeometry, armMaterial);
+            leftArm.position.set(-0.2, 0.6, 0);
+            leftArm.rotation.z = Math.PI / 4;
+            group.add(leftArm);
+            
+            const rightArm = new THREE.Mesh(armGeometry, armMaterial);
+            rightArm.position.set(0.2, 0.6, 0);
+            rightArm.rotation.z = -Math.PI / 4;
+            group.add(rightArm);
+            
+            // Legs
+            const legGeometry = new THREE.CylinderGeometry(0.04, 0.04, 0.7, 8);
+            const legMaterial = new THREE.MeshBasicMaterial({ color: 0x3366ff });
+            
+            const leftLeg = new THREE.Mesh(legGeometry, legMaterial);
+            leftLeg.position.set(-0.1, -0.35, 0);
+            group.add(leftLeg);
+            
+            const rightLeg = new THREE.Mesh(legGeometry, legMaterial);
+            rightLeg.position.set(0.1, -0.35, 0);
+            group.add(rightLeg);
+            
+            // Scale to person height (1.8m)
+            group.scale.set(0.5, 0.5, 0.5);
+        }
+        
+        // Create meteor model
+        function createMeteorModel(group) {
+            const geometry = new THREE.DodecahedronGeometry(0.3, 1);
+            const material = new THREE.MeshPhongMaterial({ 
+                color: 0xcc3300,
+                emissive: 0xcc3300,
+                emissiveIntensity: 0.2,
+                shininess: 30
+            });
+            const meteor = new THREE.Mesh(geometry, material);
+            group.add(meteor);
+            
+            // Add fire trail
+            addTrail(group, 0xff6600);
+        }
+        
+        // Create spaceship model
+        function createSpaceshipModel(group) {
+            const bodyGeometry = new THREE.ConeGeometry(0.2, 0.6, 4);
+            const bodyMaterial = new THREE.MeshPhongMaterial({ 
+                color: 0x999999,
+                emissive: 0x666666,
+                emissiveIntensity: 0.1
+            });
+            const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+            body.rotation.x = Math.PI;
+            group.add(body);
+            
+            // Add wings
+            const wingGeometry = new THREE.BoxGeometry(0.6, 0.05, 0.2);
+            const leftWing = new THREE.Mesh(wingGeometry, bodyMaterial);
+            leftWing.position.set(-0.3, 0, 0);
+            group.add(leftWing);
+            
+            const rightWing = new THREE.Mesh(wingGeometry, bodyMaterial);
+            rightWing.position.set(0.3, 0, 0);
+            group.add(rightWing);
+            
+            // Add engine glow
+            addTrail(group, 0x0066ff);
+        }
+        
+        // Create satellite model
+        function createSatelliteModel(group) {
+            const bodyGeometry = new THREE.BoxGeometry(0.4, 0.2, 0.4);
+            const bodyMaterial = new THREE.MeshPhongMaterial({ 
+                color: 0x66ccff,
+                emissive: 0x0066cc,
+                emissiveIntensity: 0.1
+            });
+            const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+            group.add(body);
+            
+            // Add solar panels
+            const panelGeometry = new THREE.BoxGeometry(0.8, 0.01, 0.4);
+            const panelMaterial = new THREE.MeshPhongMaterial({ 
+                color: 0x0066cc,
+                emissive: 0x003366,
+                emissiveIntensity: 0.2
+            });
+            const panel = new THREE.Mesh(panelGeometry, panelMaterial);
+            panel.position.set(0, 0, 0);
+            group.add(panel);
+        }
+        
+        // Create rock model
+        function createRockModel(group) {
+            const geometry = new THREE.DodecahedronGeometry(0.2, 0);
+            const material = new THREE.MeshPhongMaterial({ 
+                color: 0x996633,
+                shininess: 10
+            });
+            const rock = new THREE.Mesh(geometry, material);
+            group.add(rock);
+        }
+        
+        // Create feather model
+        function createFeatherModel(group) {
+            const featherShape = new THREE.Shape();
+            featherShape.moveTo(0, 0);
+            featherShape.bezierCurveTo(0.1, 0.2, 0.3, 0.2, 0.4, 0);
+            featherShape.bezierCurveTo(0.3, -0.2, 0.1, -0.2, 0, 0);
+            
+            const extrudeSettings = {
+                steps: 1,
+                depth: 0.01,
+                bevelEnabled: false
+            };
+            
+            const geometry = new THREE.ExtrudeGeometry(featherShape, extrudeSettings);
+            const material = new THREE.MeshPhongMaterial({ 
+                color: 0xffffff,
+                transparent: true,
+                opacity: 0.8,
+                side: THREE.DoubleSide
+            });
+            const feather = new THREE.Mesh(geometry, material);
+            feather.rotation.x = Math.PI / 4;
+            group.add(feather);
+        }
+        
+        // Add visual trail to object
+        function addTrail(object, color) {
+            // Remove existing trail if any
+            if (object.trail) {
+                scene.remove(object.trail);
+            }
+            
+            const trailGeometry = new THREE.BufferGeometry();
+            const trailMaterial = new THREE.PointsMaterial({
+                color: color,
+                size: 0.1,
+                transparent: true,
+                opacity: 0.7,
+                blending: THREE.AdditiveBlending
+            });
+            
+            const trail = new THREE.Points(trailGeometry, trailMaterial);
+            trail.positions = [];
+            trail.maxPoints = 50;
+            object.trail = trail;
+            scene.add(trail);
+        }
+        
+        // Update trail positions
+        function updateTrail() {
+            if (!fallingObject || !fallingObject.trail) return;
+            
+            const trail = fallingObject.trail;
+            const position = fallingObject.position.clone();
+            
+            // Add current position to trail
+            trail.positions.push(position);
+            
+            // Limit number of trail points
+            if (trail.positions.length > trail.maxPoints) {
+                trail.positions.shift();
+            }
+            
+            // Update trail geometry
+            const positions = [];
+            trail.positions.forEach(pos => {
+                positions.push(pos.x, pos.y, pos.z);
+            });
+            
+            trail.geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            trail.geometry.attributes.position.needsUpdate = true;
+        }
+        
+        // Position object on planet surface at given height
+        function positionObjectOnSurface(height) {
+            if (!planetMesh || !fallingObject || !surfaceMesh) return;
+            
+            // Convert height from meters to Three.js units (1 unit = 1000km)
+            const heightInUnits = height / 1000000;
+            
+            // Position object above surface
+            const objectPosition = new THREE.Vector3(0, planetRadius + heightInUnits, 0);
+            fallingObject.position.copy(objectPosition);
+            
+            // Make object stand upright (normal to surface)
+            fallingObject.lookAt(planetMesh.position);
+            fallingObject.rotateX(Math.PI / 2);
+            
+            // Update display
+            currentHeightDisplay.textContent = height.toFixed(2) + ' m';
+        }
+        
+        // Update planet information display
+        function updatePlanetInfo() {
+            currentPlanetDisplay.textContent = planetData.name;
+            gravityValue.textContent = planetData.gravity.toFixed(2) + ' m/s²';
+            diameterValue.textContent = planetData.diameter.toLocaleString() + ' km';
+            massValue.textContent = planetData.mass + ' kg';
+            escapeVelocityValue.textContent = planetData.escapeVelocity.toFixed(2) + ' km/s';
+        }
+        
+        // Start free fall simulation
+        function startFreeFall() {
+            if (isSimulating) return;
+            
+            isSimulating = true;
+            simulationStatus.textContent = 'Falling...';
+            startTime = Date.now();
+            fallTime = 0;
+            velocity = 0;
+            position = dropHeight;
+            maxVelocity = 0;
+            
+            // Disable controls during simulation
+            controls.enabled = false;
+        }
+        
+        // Reset simulation
+        function resetSimulation() {
+            isSimulating = false;
+            simulationStatus.textContent = 'Ready';
+            
+            // Reset object position
+            positionObjectOnSurface(dropHeight);
+            
+            // Reset displays
+            currentVelocityDisplay.textContent = '0.00 m/s';
+            maxVelocityDisplay.textContent = '0.00 m/s';
+            fallTimeDisplay.textContent = '0.00 s';
+            energyValue.textContent = '0.00 J';
+            
+            // Hide impact effect
+            impactEffect.style.opacity = '0';
+            
+            // Re-enable controls
+            controls.enabled = true;
+        }
+        
+        // Enter orbit simulation
+        function enterOrbit() {
+            if (isSimulating) return;
+            
+            isSimulating = true;
+            simulationStatus.textContent = 'Orbiting...';
+            startTime = Date.now();
+            fallTime = 0;
+            
+            // Calculate orbital velocity (v = sqrt(GM/r))
+            // For simplicity, we'll use a fixed altitude
+            const orbitalAltitude = 200; // km
+            const orbitalRadius = (planetData.diameter/2 + orbitalAltitude) * 1000; // in meters
+            const orbitalVelocity = Math.sqrt(planetData.gravity * (planetData.diameter/2 * 1000) ** 2 / orbitalRadius);
+            
+            // Position object at orbital altitude
+            const heightInUnits = (orbitalAltitude * 1000) / 1000000;
+            const objectPosition = new THREE.Vector3(0, planetRadius + heightInUnits, 0);
+            fallingObject.position.copy(objectPosition);
+            
+            // Set initial velocity for orbit
+            velocity = orbitalVelocity;
+            position = orbitalAltitude * 1000; // in meters
+            
+            // Disable controls during simulation
+            controls.enabled = false;
+        }
+        
+        // Change planet
+        function changePlanet() {
+            const selectedPlanet = planetSelector.value;
+            createPlanet(selectedPlanet);
+            resetSimulation();
+            updateHeight();
+        }
+        
+        // Change falling object
+        function changeObject() {
+            const selectedObject = objectSelector.value;
+            createFallingObject(selectedObject);
+            resetSimulation();
+        }
+        
+        // Update object size
+        function updateObjectSize() {
+            objectSize = parseFloat(objectSizeSlider.value);
+            objectSizeValue.textContent = objectSize.toFixed(1);
+            
+            if (fallingObject) {
+                fallingObject.scale.set(objectSize, objectSize, objectSize);
+                
+                // Update physics properties based on size
+                const objectData = objectInfo[currentObjectType];
+                crossSectionalArea = objectData.area * objectSize;
+                
+                if (!isSimulating) {
+                    positionObjectOnSurface(dropHeight);
+                }
+            }
+        }
+        
+        // Drop object from current height
+        function dropObject() {
+            if (isSimulating) return;
+            
+            // Set drop height to a much higher value for space drop
+            const spaceHeight = 100000; // 100 km
+            heightSlider.value = spaceHeight;
+            heightValue.textContent = spaceHeight;
+            dropHeight = spaceHeight;
+            
+            // Position object in space
+            positionObjectOnSurface(spaceHeight);
+            
+            // Start free fall
+            startFreeFall();
+        }
+        
+        // Update drop height
+        function updateHeight() {
+            dropHeight = parseInt(heightSlider.value);
+            heightValue.textContent = dropHeight;
+            
+            if (!isSimulating) {
+                positionObjectOnSurface(dropHeight);
+            }
+        }
+        
+        // Reset camera position
+        function resetCamera() {
+            camera.position.set(0, 0, planetRadius * 3);
+            controls.target.set(0, planetRadius, 0);
+            controls.update();
+        }
+        
+        // Show impact effect at screen position
+        function showImpactEffect(position) {
+            // Convert 3D position to screen coordinates
+            const vector = position.clone().project(camera);
+            vector.x = (vector.x + 1) / 2 * window.innerWidth;
+            vector.y = -(vector.y - 1) / 2 * window.innerHeight;
+            
+            // Position and show effect
+            impactEffect.style.left = vector.x + 'px';
+            impactEffect.style.top = vector.y + 'px';
+            impactEffect.style.opacity = '0.8';
+            impactEffect.style.transform = 'scale(1)';
+            
+            // Animate out
+            setTimeout(() => {
+                impactEffect.style.opacity = '0';
+                impactEffect.style.transform = 'scale(2)';
+            }, 500);
+        }
+        
+        // Handle window resize
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        
+        // Physics update
+        function updatePhysics(timestamp) {
+            if (!isSimulating) return;
+            
+            // Calculate delta time in seconds
+            const deltaTime = (timestamp - lastTimestamp) / 1000;
+            lastTimestamp = timestamp;
+            
+            if (deltaTime > 0.1) return; // Skip large time jumps
+            
+            if (simulationStatus.textContent === 'Falling...') {
+                // Free fall physics
+                fallTime = (Date.now() - startTime) / 1000;
+                
+                // Calculate forces
+                const gravitationalForce = objectMass * planetData.gravity;
+                
+                // Calculate drag force if planet has atmosphere
+                let dragForce = 0;
+                if (planetData.atmosphere && position < 80000) { // Only apply drag in lower atmosphere
+                    // Simple atmospheric density model (decreases with altitude)
+                    const atmosphericDensity = airDensity * Math.exp(-position / 8000);
+                    dragForce = 0.5 * atmosphericDensity * velocity * velocity * dragCoefficient * crossSectionalArea;
+                }
+                
+                // Calculate net acceleration (a = F/m)
+                const acceleration = (gravitationalForce - dragForce) / objectMass;
+                
+                // Update velocity (v = v0 + a*t)
+                velocity += acceleration * deltaTime;
+                
+                // Update position (y = y0 - v*t - 0.5*a*t²)
+                position -= velocity * deltaTime;
+                
+                // Check if object hit the ground
+                if (position <= 0) {
+                    position = 0;
+                    isSimulating = false;
+                    simulationStatus.textContent = 'Impact!';
+                    
+                    // Show impact effect
+                    showImpactEffect(fallingObject.position);
+                    
+                    // Show impact velocity
+                    currentVelocityDisplay.textContent = velocity.toFixed(2) + ' m/s (impact)';
+                }
+                
+                // Update max velocity
+                if (velocity > maxVelocity) {
+                    maxVelocity = velocity;
+                    maxVelocityDisplay.textContent = maxVelocity.toFixed(2) + ' m/s';
+                }
+                
+                // Calculate kinetic energy (E = 0.5*m*v²)
+                const kineticEnergy = 0.5 * objectMass * velocity * velocity;
+                
+                // Update displays
+                currentVelocityDisplay.textContent = velocity.toFixed(2) + ' m/s';
+                fallTimeDisplay.textContent = fallTime.toFixed(2) + ' s';
+                currentHeightDisplay.textContent = position.toFixed(2) + ' m';
+                energyValue.textContent = kineticEnergy.toFixed(2) + ' J';
+                
+                // Update object position
+                positionObjectOnSurface(position);
+                
+                // Update trail if exists
+                updateTrail();
+                
+                // Add rotation effect based on velocity
+                if (fallingObject) {
+                    const rotationSpeed = velocity * 0.01;
+                    fallingObject.rotation.z += rotationSpeed * deltaTime;
+                    
+                    // For meteor, add some random rotation
+                    if (currentObjectType === 'meteor') {
+                        fallingObject.rotation.x += rotationSpeed * 0.3 * deltaTime;
+                        fallingObject.rotation.y += rotationSpeed * 0.2 * deltaTime;
+                    }
+                }
+            } else if (simulationStatus.textContent === 'Orbiting...') {
+                // Orbital mechanics (simplified)
+                fallTime = (Date.now() - startTime) / 1000;
+                
+                // Calculate angular velocity (ω = v/r)
+                const orbitalRadius = (planetData.diameter/2 * 1000) + position;
+                const angularVelocity = velocity / orbitalRadius;
+                
+                // Update orbital position (θ = ω*t)
+                const angle = angularVelocity * fallTime;
+                
+                // Position in circular orbit
+                const orbitX = Math.sin(angle) * (orbitalRadius / 1000000);
+                const orbitZ = Math.cos(angle) * (orbitalRadius / 1000000);
+                
+                // Update object position
+                fallingObject.position.set(
+                    orbitX,
+                    planetRadius,
+                    orbitZ
+                );
+                
+                // Make object face direction of motion
+                fallingObject.lookAt(
+                    orbitX + Math.sin(angle + Math.PI/2),
+                    planetRadius,
+                    orbitZ + Math.cos(angle + Math.PI/2)
+                );
+                fallingObject.rotateX(Math.PI / 2);
+                
+                // Update displays
+                currentVelocityDisplay.textContent = velocity.toFixed(2) + ' m/s';
+                fallTimeDisplay.textContent = fallTime.toFixed(2) + ' s';
+                currentHeightDisplay.textContent = (position/1000).toFixed(2) + ' km';
+                
+                // Calculate kinetic and potential energy
+                const kineticEnergy = 0.5 * objectMass * velocity * velocity;
+                const potentialEnergy = -planetData.gravity * objectMass * (planetData.diameter/2 * 1000) / orbitalRadius;
+                energyValue.textContent = (kineticEnergy + potentialEnergy).toFixed(2) + ' J';
+            }
+        }
+        
+        // Animation loop
+        function animate(timestamp) {
+            animationFrameId = requestAnimationFrame(animate);
+            
+            // Update physics
+            updatePhysics(timestamp);
+            
+            // Update controls
+            controls.update();
+            
+            // Render scene
+            renderer.render(scene, camera);
+        }
+        
+        // Clean up on exit
+        function cleanup() {
+            cancelAnimationFrame(animationFrameId);
+            window.removeEventListener('resize', onWindowResize);
+        }
+        
+        // Initialize when page loads
+        window.onload = init;
+        window.onbeforeunload = cleanup;
+    </script>
+</body>
+</html>

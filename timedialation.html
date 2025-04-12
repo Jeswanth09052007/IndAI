@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relativity Explorer: Time Dilation Visualized</title>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
+    <style>
+        :root {
+            --primary: #4a6fa5;
+            --secondary: #166088;
+            --dark: #0a2342;
+            --light: #e8f1f2;
+            --accent: #ff7e5f;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--light);
+            color: var(--dark);
+            line-height: 1.6;
+        }
+        
+        header {
+            background: linear-gradient(135deg, var(--dark), var(--secondary));
+            color: white;
+            padding: 2rem 0;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        h1 {
+            margin: 0;
+            font-size: 2.5rem;
+        }
+        
+        h2 {
+            color: var(--secondary);
+            border-bottom: 2px solid var(--accent);
+            padding-bottom: 0.5rem;
+            margin-top: 2rem;
+        }
+        
+        .subtitle {
+            font-style: italic;
+            opacity: 0.9;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .calculator {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+        
+        .input-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+            color: var(--secondary);
+        }
+        
+        input, select {
+            width: 100%;
+            padding: 0.8rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+        
+        button {
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            font-size: 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        button:hover {
+            background-color: #ff6a45;
+            transform: translateY(-2px);
+        }
+        
+        .result {
+            background-color: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 4px;
+            margin-top: 1.5rem;
+        }
+        
+        .visualization {
+            height: 500px;
+            position: relative;
+            overflow: hidden;
+            border-radius: 8px;
+            margin: 2rem 0;
+        }
+        
+        #timeDilationCanvas {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+        
+        .info-card {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .info-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .info-card h3 {
+            color: var(--primary);
+            margin-top: 0;
+        }
+        
+        footer {
+            background-color: var(--dark);
+            color: white;
+            text-align: center;
+            padding: 2rem 0;
+            margin-top: 3rem;
+        }
+        
+        @media (max-width: 768px) {
+            .calculator {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .formula {
+            background-color: #f0f7ff;
+            padding: 1rem;
+            border-left: 4px solid var(--primary);
+            font-family: monospace;
+            overflow-x: auto;
+        }
+        
+        .tabs {
+            display: flex;
+            margin-bottom: 1rem;
+        }
+        
+        .tab {
+            padding: 0.8rem 1.5rem;
+            background-color: #eee;
+            border: none;
+            cursor: pointer;
+            margin-right: 0.5rem;
+            border-radius: 4px 4px 0 0;
+        }
+        
+        .tab.active {
+            background-color: white;
+            font-weight: bold;
+            border-bottom: 3px solid var(--accent);
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .comparison {
+            display: flex;
+            justify-content: space-around;
+            margin: 2rem 0;
+            flex-wrap: wrap;
+        }
+        
+        .comparison-item {
+            text-align: center;
+            flex: 1;
+            min-width: 200px;
+            margin: 1rem;
+        }
+        
+        .comparison-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--primary);
+        }
+        
+        .comparison-label {
+            font-size: 0.9rem;
+            color: #666;
+        }
+        
+        .animation-controls {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>Relativity Explorer</h1>
+            <p class="subtitle">Visualizing Time Dilation and Special Relativity</p>
+        </div>
+    </header>
+    
+    <main class="container">
+        <section class="card">
+            <h2>Time Dilation Calculator</h2>
+            <p>Calculate how time passes differently for observers in different inertial frames due to relative velocity.</p>
+            
+            <div class="calculator">
+                <div>
+                    <div class="input-group">
+                        <label for="velocity">Relative Velocity</label>
+                        <input type="number" id="velocity" min="0" max="299792458" step="1000" value="100000">
+                        <select id="velocityUnit">
+                            <option value="m/s">m/s</option>
+                            <option value="km/s">km/s</option>
+                            <option value="c" selected>% of light speed (c)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="timeInterval">Time Interval in Rest Frame</label>
+                        <input type="number" id="timeInterval" min="0" step="1" value="1">
+                        <select id="timeUnit">
+                            <option value="seconds">seconds</option>
+                            <option value="minutes">minutes</option>
+                            <option value="hours" selected>hours</option>
+                            <option value="days">days</option>
+                            <option value="years">years</option>
+                        </select>
+                    </div>
+                    
+                    <button id="calculateBtn">Calculate Time Dilation</button>
+                    
+                    <div class="result" id="result">
+                        <h3>Results</h3>
+                        <p>Enter values and click calculate to see results.</p>
+                    </div>
+                </div>
+                
+                <div>
+                    <div class="formula">
+                        <h3>Time Dilation Formula</h3>
+                        <p>Δt' = γΔt = Δt / √(1 - v²/c²)</p>
+                        <p>Where:</p>
+                        <ul>
+                            <li>Δt' = Dilated time (observed time)</li>
+                            <li>Δt = Proper time (time in rest frame)</li>
+                            <li>v = Relative velocity</li>
+                            <li>c = Speed of light (299,792,458 m/s)</li>
+                            <li>γ = Lorentz factor</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="comparison">
+                        <div class="comparison-item">
+                            <div class="comparison-value" id="lorentzFactor">1.00</div>
+                            <div class="comparison-label">Lorentz Factor (γ)</div>
+                        </div>
+                        <div class="comparison-item">
+                            <div class="comparison-value" id="percentC">0.00%</div>
+                            <div class="comparison-label">of Light Speed</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <section class="card">
+            <h2>3D Visualization of Time Dilation</h2>
+            <p>Explore how time dilation affects different reference frames in this interactive visualization.</p>
+            
+            <div class="visualization">
+                <div id="timeDilationCanvas"></div>
+            </div>
+            
+            <div class="tabs">
+                <button class="tab active" data-tab="earth">Earth Observer</button>
+                <button class="tab" data-tab="spaceship">Spaceship Observer</button>
+                <button class="tab" data-tab="both">Both Frames</button>
+            </div>
+            
+            <div class="animation-controls">
+                <button id="startAnimation">Start Animation</button>
+                <button id="resetAnimation">Reset</button>
+                <label for="animationSpeed">Speed:</label>
+                <input type="range" id="animationSpeed" min="1" max="10" value="3">
+            </div>
+        </section>
+        
+        <section class="card">
+            <h2>Understanding Time Dilation</h2>
+            
+            <div class="info-grid">
+                <div class="info-card">
+                    <h3>What is Time Dilation?</h3>
+                    <p>Time dilation is a difference in the elapsed time measured by two observers due to a relative velocity between them or a difference in gravitational potential.</p>
+                    <p>In special relativity, clocks moving relative to an inertial observer will be measured to tick slower than a clock at rest in that frame.</p>
+                </div>
+                
+                <div class="info-card">
+                    <h3>Special vs General Relativity</h3>
+                    <p><strong>Special Relativity</strong> deals with time dilation due to relative velocity in inertial frames (no acceleration).</p>
+                    <p><strong>General Relativity</strong> extends this to include acceleration and gravity, where time runs slower in stronger gravitational fields.</p>
+                </div>
+                
+                <div class="info-card">
+                    <h3>Experimental Verification</h3>
+                    <p>Time dilation has been confirmed by numerous experiments:</p>
+                    <ul>
+                        <li>Hafele-Keating experiment (atomic clocks on airplanes)</li>
+                        <li>GPS satellite timing adjustments</li>
+                        <li>Observation of fast-moving cosmic particles</li>
+                    </ul>
+                </div>
+                
+                <div class="info-card">
+                    <h3>Real-World Examples</h3>
+                    <p><strong>GPS Satellites:</strong> Their clocks run 38 microseconds faster per day due to velocity time dilation (but 45 microseconds slower due to gravitational time dilation).</p>
+                    <p><strong>Interstellar Travel:</strong> At 90% light speed, 1 year ship time = 2.29 years Earth time.</p>
+                </div>
+            </div>
+        </section>
+        
+        <section class="card">
+            <h2>Time Dilation in Extreme Cases</h2>
+            
+            <div class="tabs">
+                <button class="tab active" data-tab="examples">Examples</button>
+                <button class="tab" data-tab="limits">Theoretical Limits</button>
+                <button class="tab" data-tab="paradox">Twin Paradox</button>
+            </div>
+            
+            <div class="tab-content active" data-tab="examples">
+                <table style="width:100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background-color: var(--primary); color: white;">
+                            <th style="padding: 12px; text-align: left;">Velocity (% of c)</th>
+                            <th style="padding: 12px; text-align: left;">Lorentz Factor (γ)</th>
+                            <th style="padding: 12px; text-align: left;">1 Year Ship Time</th>
+                            <th style="padding: 12px; text-align: left;">Earth Time</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr style="border-bottom: 1px solid #ddd;">
+                            <td style="padding: 12px;">10%</td>
+                            <td style="padding: 12px;">1.005</td>
+                            <td style="padding: 12px;">1 year</td>
+                            <td style="padding: 12px;">1.005 years</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #ddd; background-color: #f9f9f9;">
+                            <td style="padding: 12px;">50%</td>
+                            <td style="padding: 12px;">1.155</td>
+                            <td style="padding: 12px;">1 year</td>
+                            <td style="padding: 12px;">1.155 years</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #ddd;">
+                            <td style="padding: 12px;">90%</td>
+                            <td style="padding: 12px;">2.294</td>
+                            <td style="padding: 12px;">1 year</td>
+                            <td style="padding: 12px;">2.294 years</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #ddd; background-color: #f9f9f9;">
+                            <td style="padding: 12px;">99%</td>
+                            <td style="padding: 12px;">7.089</td>
+                            <td style="padding: 12px;">1 year</td>
+                            <td style="padding: 12px;">7.089 years</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 12px;">99.9%</td>
+                            <td style="padding: 12px;">22.366</td>
+                            <td style="padding: 12px;">1 year</td>
+                            <td style="padding: 12px;">22.366 years</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="tab-content" data-tab="limits">
+                <h3>Approaching the Speed of Light</h3>
+                <p>As velocity approaches the speed of light (c), time dilation becomes extreme:</p>
+                <ul>
+                    <li>At 99.99% of c, γ ≈ 70.71 (1 year ship time ≈ 70.71 years Earth time)</li>
+                    <li>At 99.999% of c, γ ≈ 223.6 (1 year ship time ≈ 223.6 years Earth time)</li>
+                    <li>At c itself, time would stop completely for the moving object (γ becomes infinite)</li>
+                </ul>
+                <p>This is why nothing with mass can reach the speed of light - it would require infinite energy.</p>
+            </div>
+            
+            <div class="tab-content" data-tab="paradox">
+                <h3>The Twin Paradox</h3>
+                <p>The twin paradox is a thought experiment in special relativity involving identical twins:</p>
+                <ol>
+                    <li>One twin remains on Earth (inertial frame)</li>
+                    <li>The other twin travels at high velocity to a distant star and back</li>
+                    <li>Due to time dilation, the traveling twin ages less</li>
+                </ol>
+                <p>This seems paradoxical because from the traveling twin's perspective, it's the Earth twin who is moving. The resolution lies in the fact that the traveling twin must accelerate to turn around, breaking the symmetry between the two frames.</p>
+            </div>
+        </section>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>Relativity Explorer - An Educational Tool for Understanding Special Relativity</p>
+            <p>Created for physics students and enthusiasts</p>
+            <p>© 2023 Physics Education Project</p>
+        </div>
+    </footer>
+
+    <script>
+        // Constants
+        const SPEED_OF_LIGHT = 299792458; // m/s
+        const EARTH_RADIUS = 5;
+        const SPACESHIP_RADIUS = 2;
+        
+        // Three.js variables
+        let scene, camera, renderer, controls;
+        let earth, spaceship, clockHandEarth, clockHandShip;
+        let animationId = null;
+        let animationSpeed = 3;
+        let currentView = 'earth';
+        let spaceshipPosition = { x: 0, y: 0, z: 0 };
+        let velocity = 0.1; // as fraction of c
+        let lorentzFactor = 1;
+        
+        // Initialize Three.js scene
+        function initVisualization() {
+            const canvas = document.getElementById('timeDilationCanvas');
+            
+            // Scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xf0f0f0);
+            
+            // Camera
+            camera = new THREE.PerspectiveCamera(75, canvas.clientWidth / canvas.clientHeight, 0.1, 1000);
+            camera.position.set(0, 15, 30);
+            
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+            canvas.appendChild(renderer.domElement);
+            
+            // Controls
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0x404040);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+            directionalLight.position.set(1, 1, 1);
+            scene.add(directionalLight);
+            
+            // Create Earth
+            const earthGeometry = new THREE.SphereGeometry(EARTH_RADIUS, 32, 32);
+            const earthMaterial = new THREE.MeshPhongMaterial({ 
+                color: 0x3498db,
+                specular: 0x111111,
+                shininess: 30
+            });
+            earth = new THREE.Mesh(earthGeometry, earthMaterial);
+            scene.add(earth);
+            
+            // Create Earth's clock
+            const clockGeometry = new THREE.CylinderGeometry(EARTH_RADIUS * 1.2, EARTH_RADIUS * 1.2, 0.2, 32);
+            const clockMaterial = new THREE.MeshPhongMaterial({ color: 0x555555 });
+            const earthClock = new THREE.Mesh(clockGeometry, clockMaterial);
+            earthClock.position.y = EARTH_RADIUS + 0.1;
+            earth.add(earthClock);
+            
+            // Earth clock hand
+            const handGeometry = new THREE.BoxGeometry(0.1, EARTH_RADIUS * 0.8, 0.1);
+            const handMaterial = new THREE.MeshPhongMaterial({ color: 0xff0000 });
+            clockHandEarth = new THREE.Mesh(handGeometry, handMaterial);
+            clockHandEarth.position.y = EARTH_RADIUS + 0.2;
+            clockHandEarth.position.z = EARTH_RADIUS * 0.4;
+            earth.add(clockHandEarth);
+            
+            // Create Spaceship
+            const shipGeometry = new THREE.SphereGeometry(SPACESHIP_RADIUS, 32, 32);
+            const shipMaterial = new THREE.MeshPhongMaterial({ 
+                color: 0xe74c3c,
+                specular: 0x111111,
+                shininess: 30
+            });
+            spaceship = new THREE.Mesh(shipGeometry, shipMaterial);
+            spaceship.position.set(15, 0, 0);
+            scene.add(spaceship);
+            
+            // Create Spaceship's clock
+            const shipClockGeometry = new THREE.CylinderGeometry(SPACESHIP_RADIUS * 1.2, SPACESHIP_RADIUS * 1.2, 0.2, 32);
+            const shipClock = new THREE.Mesh(shipClockGeometry, clockMaterial);
+            shipClock.position.y = SPACESHIP_RADIUS + 0.1;
+            spaceship.add(shipClock);
+            
+            // Spaceship clock hand
+            const shipHandGeometry = new THREE.BoxGeometry(0.1, SPACESHIP_RADIUS * 0.8, 0.1);
+            clockHandShip = new THREE.Mesh(shipHandGeometry, handMaterial);
+            clockHandShip.position.y = SPACESHIP_RADIUS + 0.2;
+            clockHandShip.position.z = SPACESHIP_RADIUS * 0.4;
+            spaceship.add(clockHandShip);
+            
+            // Grid helper
+            const gridHelper = new THREE.GridHelper(50, 50);
+            scene.add(gridHelper);
+            
+            // Axes helper
+            const axesHelper = new THREE.AxesHelper(10);
+            scene.add(axesHelper);
+            
+            // Handle window resize
+            window.addEventListener('resize', () => {
+                camera.aspect = canvas.clientWidth / canvas.clientHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+            });
+            
+            // Start animation
+            animate();
+        }
+        
+        // Animation loop
+        function animate() {
+            animationId = requestAnimationFrame(animate);
+            
+            // Update controls
+            controls.update();
+            
+            // Rotate clock hands
+            if (currentView === 'earth' || currentView === 'both') {
+                clockHandEarth.rotation.y -= 0.01 * animationSpeed;
+            }
+            
+            if (currentView === 'spaceship' || currentView === 'both') {
+                clockHandShip.rotation.y -= 0.01 * animationSpeed / lorentzFactor;
+            }
+            
+            // Move spaceship if in animation
+            if (velocity > 0 && currentView !== 'both') {
+                spaceship.position.x += velocity * animationSpeed;
+                
+                // Wrap around if too far
+                if (Math.abs(spaceship.position.x) > 25) {
+                    spaceship.position.x = -spaceship.position.x;
+                }
+            }
+            
+            // Render scene
+            renderer.render(scene, camera);
+        }
+        
+        // Set visualization view
+        function setView(view) {
+            currentView = view;
+            
+            switch(view) {
+                case 'earth':
+                    camera.position.set(0, 15, 30);
+                    camera.lookAt(0, 0, 0);
+                    break;
+                case 'spaceship':
+                    camera.position.copy(spaceship.position);
+                    camera.position.y += 5;
+                    camera.position.z += 10;
+                    camera.lookAt(spaceship.position);
+                    break;
+                case 'both':
+                    camera.position.set(0, 25, 0);
+                    camera.lookAt(0, 0, 0);
+                    break;
+            }
+        }
+        
+        // Calculate time dilation
+        function calculateTimeDilation() {
+            // Get input values
+            const velocityInput = parseFloat(document.getElementById('velocity').value);
+            const velocityUnit = document.getElementById('velocityUnit').value;
+            const timeInterval = parseFloat(document.getElementById('timeInterval').value);
+            const timeUnit = document.getElementById('timeUnit').value;
+            
+            // Convert velocity to fraction of c
+            let v;
+            switch(velocityUnit) {
+                case 'm/s':
+                    v = velocityInput / SPEED_OF_LIGHT;
+                    break;
+                case 'km/s':
+                    v = (velocityInput * 1000) / SPEED_OF_LIGHT;
+                    break;
+                case 'c':
+                    v = velocityInput / 100;
+                    break;
+            }
+            
+            // Validate velocity
+            if (v >= 1) {
+                document.getElementById('result').innerHTML = `
+                    <h3>Error</h3>
+                    <p>Velocity cannot exceed the speed of light (c).</p>
+                `;
+                return;
+            }
+            
+            // Calculate Lorentz factor
+            const gamma = 1 / Math.sqrt(1 - v * v);
+            
+            // Convert time interval to seconds
+            let timeInSeconds;
+            switch(timeUnit) {
+                case 'seconds':
+                    timeInSeconds = timeInterval;
+                    break;
+                case 'minutes':
+                    timeInSeconds = timeInterval * 60;
+                    break;
+                case 'hours':
+                    timeInSeconds = timeInterval * 3600;
+                    break;
+                case 'days':
+                    timeInSeconds = timeInterval * 86400;
+                    break;
+                case 'years':
+                    timeInSeconds = timeInterval * 31557600; // Julian year
+                    break;
+            }
+            
+            // Calculate dilated time
+            const dilatedTime = gamma * timeInSeconds;
+            
+            // Convert back to original unit for display
+            let dilatedTimeDisplay;
+            switch(timeUnit) {
+                case 'seconds':
+                    dilatedTimeDisplay = dilatedTime.toFixed(6);
+                    break;
+                case 'minutes':
+                    dilatedTimeDisplay = (dilatedTime / 60).toFixed(6);
+                    break;
+                case 'hours':
+                    dilatedTimeDisplay = (dilatedTime / 3600).toFixed(6);
+                    break;
+                case 'days':
+                    dilatedTimeDisplay = (dilatedTime / 86400).toFixed(6);
+                    break;
+                case 'years':
+                    dilatedTimeDisplay = (dilatedTime / 31557600).toFixed(6);
+                    break;
+            }
+            
+            // Update visualization parameters
+            velocity = v * 0.5; // Scale down for visualization
+            lorentzFactor = gamma;
+            
+            // Update UI
+            document.getElementById('result').innerHTML = `
+                <h3>Results</h3>
+                <p><strong>Proper Time (Δt):</strong> ${timeInterval} ${timeUnit}</p>
+                <p><strong>Dilated Time (Δt'):</strong> ${dilatedTimeDisplay} ${timeUnit}</p>
+                <p><strong>Time Difference:</strong> ${(dilatedTimeDisplay - timeInterval).toFixed(6)} ${timeUnit}</p>
+            `;
+            
+            document.getElementById('lorentzFactor').textContent = gamma.toFixed(2);
+            document.getElementById('percentC').textContent = `${(v * 100).toFixed(2)}%`;
+        }
+        
+        // Initialize tabs
+        function initTabs() {
+            const tabs = document.querySelectorAll('.tab');
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    // Remove active class from all tabs and content
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                    
+                    // Add active class to clicked tab and corresponding content
+                    tab.classList.add('active');
+                    const tabName = tab.getAttribute('data-tab');
+                    
+                    if (tabName === 'earth' || tabName === 'spaceship' || tabName === 'both') {
+                        setView(tabName);
+                    } else {
+                        document.querySelector(`.tab-content[data-tab="${tabName}"]`).classList.add('active');
+                    }
+                });
+            });
+        }
+        
+        // Initialize animation controls
+        function initAnimationControls() {
+            document.getElementById('startAnimation').addEventListener('click', () => {
+                if (!animationId) {
+                    animate();
+                }
+            });
+            
+            document.getElementById('resetAnimation').addEventListener('click', () => {
+                spaceship.position.set(15, 0, 0);
+                clockHandEarth.rotation.y = 0;
+                clockHandShip.rotation.y = 0;
+            });
+            
+            document.getElementById('animationSpeed').addEventListener('input', (e) => {
+                animationSpeed = parseInt(e.target.value);
+            });
+        }
+        
+        // Initialize calculator
+        function initCalculator() {
+            document.getElementById('calculateBtn').addEventListener('click', calculateTimeDilation);
+            
+            // Also calculate when input changes
+            document.getElementById('velocity').addEventListener('input', calculateTimeDilation);
+            document.getElementById('velocityUnit').addEventListener('change', calculateTimeDilation);
+            document.getElementById('timeInterval').addEventListener('input', calculateTimeDilation);
+            document.getElementById('timeUnit').addEventListener('change', calculateTimeDilation);
+        }
+        
+        // Initialize everything when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            initVisualization();
+            initTabs();
+            initAnimationControls();
+            initCalculator();
+            
+            // Calculate with default values
+            calculateTimeDilation();
+        });
+    </script>
+</body>
+</html>

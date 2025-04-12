@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cosmic Watch | NASA Asteroid Impact Predictor</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Space+Mono&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
+    <style>
+        :root {
+            --space-blue: #0a0e23;
+            --neon-blue: #00f3ff;
+            --neon-pink: #ff00aa;
+            --star-white: rgba(255, 255, 255, 0.8);
+            --warning-orange: #ff6d00;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Space Mono', monospace;
+            background-color: var(--space-blue);
+            color: white;
+            overflow-x: hidden;
+            height: 100vh;
+        }
+        
+        #container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        
+        header {
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(10, 14, 35, 0.8);
+            border-bottom: 1px solid var(--neon-blue);
+            z-index: 100;
+            position: relative;
+        }
+        
+        .logo {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.8rem;
+            background: linear-gradient(90deg, var(--neon-blue), var(--neon-pink));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 0 10px rgba(0, 243, 255, 0.3);
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+        }
+        
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.9rem;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .nav-links a:hover {
+            color: var(--neon-blue);
+        }
+        
+        .nav-links a::after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 2px;
+            bottom: -5px;
+            left: 0;
+            background-color: var(--neon-blue);
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+        }
+        
+        .nav-links a:hover::after {
+            transform: scaleX(1);
+        }
+        
+        main {
+            display: flex;
+            flex: 1;
+            position: relative;
+        }
+        
+        #visualization {
+            flex: 1;
+            position: relative;
+        }
+        
+        #three-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        #dashboard {
+            width: 400px;
+            background: rgba(10, 14, 35, 0.9);
+            border-left: 1px solid var(--neon-blue);
+            padding: 1.5rem;
+            overflow-y: auto;
+            z-index: 10;
+            box-shadow: -5px 0 15px rgba(0, 0, 0, 0.5);
+        }
+        
+        .dashboard-section {
+            margin-bottom: 2rem;
+        }
+        
+        h2 {
+            font-family: 'Orbitron', sans-serif;
+            color: var(--neon-blue);
+            margin-bottom: 1rem;
+            font-size: 1.3rem;
+            letter-spacing: 1px;
+        }
+        
+        .info-card {
+            background: rgba(20, 25, 60, 0.5);
+            border: 1px solid rgba(0, 243, 255, 0.2);
+            border-radius: 5px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .info-card:hover {
+            border-color: var(--neon-blue);
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.2);
+        }
+        
+        .info-card h3 {
+            color: var(--neon-pink);
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .info-card p {
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        
+        .danger {
+            border-color: var(--warning-orange);
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(255, 109, 0, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(255, 109, 0, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 109, 0, 0); }
+        }
+        
+        .danger h3 {
+            color: var(--warning-orange);
+        }
+        
+        .data-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+        
+        .data-label {
+            color: var(--neon-blue);
+        }
+        
+        .data-value {
+            font-weight: bold;
+        }
+        
+        #search {
+            width: 100%;
+            padding: 0.8rem;
+            background: rgba(20, 25, 60, 0.5);
+            border: 1px solid var(--neon-blue);
+            color: white;
+            font-family: 'Space Mono', monospace;
+            margin-bottom: 1rem;
+            border-radius: 5px;
+        }
+        
+        #search::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+        
+        button {
+            background: linear-gradient(90deg, var(--neon-blue), var(--neon-pink));
+            border: none;
+            color: var(--space-blue);
+            padding: 0.8rem 1.5rem;
+            font-family: 'Orbitron', sans-serif;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 243, 255, 0.4);
+        }
+        
+        #timeline {
+            width: 100%;
+            height: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            margin: 1rem 0;
+            position: relative;
+        }
+        
+        #timeline-progress {
+            position: absolute;
+            height: 100%;
+            background: linear-gradient(90deg, var(--neon-blue), var(--neon-pink));
+            border-radius: 5px;
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+        
+        #earth-info {
+            display: flex;
+            align-items: center;
+            margin-top: 1rem;
+        }
+        
+        #earth-visual {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(145deg, #1a66ff, #0039a6);
+            margin-right: 1rem;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(26, 102, 255, 0.5);
+        }
+        
+        #earth-visual::before {
+            content: '';
+            position: absolute;
+            top: 15px;
+            left: 20px;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            opacity: 0.8;
+        }
+        
+        #earth-visual::after {
+            content: '';
+            position: absolute;
+            top: 25px;
+            left: 40px;
+            width: 10px;
+            height: 10px;
+            background: white;
+            border-radius: 50%;
+            opacity: 0.6;
+        }
+        
+        .cloud {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            opacity: 0.7;
+        }
+        
+        #loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--space-blue);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(0, 243, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: var(--neon-blue);
+            animation: spin 1s ease-in-out infinite;
+            margin-bottom: 1rem;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .loading-text {
+            font-family: 'Orbitron', sans-serif;
+            color: var(--neon-blue);
+            letter-spacing: 2px;
+        }
+        
+        .tooltip {
+            position: absolute;
+            background: rgba(10, 14, 35, 0.9);
+            border: 1px solid var(--neon-blue);
+            padding: 0.5rem;
+            border-radius: 5px;
+            font-size: 0.8rem;
+            pointer-events: none;
+            z-index: 100;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        @media (max-width: 768px) {
+            main {
+                flex-direction: column;
+            }
+            
+            #dashboard {
+                width: 100%;
+                height: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="loading">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">INITIALIZING COSMIC WATCH</div>
+    </div>
+
+    <div id="container">
+        <header>
+            <div class="logo">COSMIC WATCH</div>
+            <div class="nav-links">
+                <a href="#">DASHBOARD</a>
+                <a href="#">PREDICTIONS</a>
+                <a href="#">ABOUT</a>
+                <a href="#">CONTACT</a>
+            </div>
+        </header>
+        
+        <main>
+            <div id="visualization">
+                <div id="three-container"></div>
+            </div>
+            
+            <div id="dashboard">
+                <div class="dashboard-section">
+                    <h2>ASTEROID TRACKER</h2>
+                    <input type="text" id="search" placeholder="Search asteroids...">
+                    
+                    <div id="asteroid-list">
+                        <!-- Asteroid cards will be inserted here -->
+                    </div>
+                </div>
+                
+                <div class="dashboard-section">
+                    <h2>IMPACT PREDICTION</h2>
+                    <div class="info-card">
+                        <h3>EARTH IMPACT MONITOR</h3>
+                        <div id="timeline">
+                            <div id="timeline-progress"></div>
+                        </div>
+                        <div class="data-row">
+                            <span class="data-label">Next Close Approach:</span>
+                            <span class="data-value" id="next-approach">Loading...</span>
+                        </div>
+                        <div class="data-row">
+                            <span class="data-label">Potential Impact:</span>
+                            <span class="data-value" id="potential-impact">None detected</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="dashboard-section">
+                    <h2>EARTH STATUS</h2>
+                    <div class="info-card">
+                        <div id="earth-info">
+                            <div id="earth-visual"></div>
+                            <div>
+                                <h3>PLANET EARTH</h3>
+                                <p>Current asteroid threat level: <span id="threat-level">LOW</span></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="dashboard-section">
+                    <button id="refresh-btn">REFRESH DATA</button>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <div class="tooltip" id="tooltip"></div>
+    
+    <script>
+        // API Configuration
+        const API_KEY = 'FgsspSnHDOz1adFoOb7dYPiG91l7PadoHjaxDgD7';
+        const API_URL = 'https://api.nasa.gov/neo/rest/v1/feed';
+        
+        // Three.js variables
+        let scene, camera, renderer, controls;
+        let earth, asteroids = [];
+        let asteroidMeshes = [];
+        let highlightedAsteroid = null;
+        
+        // Current date
+        const today = new Date();
+        const tomorrow = new Date();
+        tomorrow.setDate(today.getDate() + 1);
+        
+        // Format dates for API
+        function formatDate(date) {
+            return date.toISOString().split('T')[0];
+        }
+        
+        // Initialize the application
+        async function init() {
+            // Hide loading screen after 2 seconds
+            setTimeout(() => {
+                document.getElementById('loading').style.opacity = '0';
+                setTimeout(() => {
+                    document.getElementById('loading').style.display = 'none';
+                }, 300);
+            }, 2000);
+            
+            // Initialize Three.js
+            initThreeJS();
+            
+            // Load initial data
+            await loadAsteroidData();
+            
+            // Add event listeners
+            document.getElementById('refresh-btn').addEventListener('click', loadAsteroidData);
+            
+            // Start animation loop
+            animate();
+        }
+        
+        // Initialize Three.js scene
+        function initThreeJS() {
+            // Create scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0a0e23);
+            
+            // Create camera
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 5;
+            
+            // Create renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.getElementById('three-container').appendChild(renderer.domElement);
+            
+            // Add controls
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            
+            // Add stars
+            addStars();
+            
+            // Create Earth
+            createEarth();
+            
+            // Handle window resize
+            window.addEventListener('resize', onWindowResize);
+        }
+        
+        // Create Earth model
+        function createEarth() {
+            const geometry = new THREE.SphereGeometry(1, 32, 32);
+            const material = new THREE.MeshPhongMaterial({
+                map: new THREE.TextureLoader().load('https://threejs.org/examples/textures/planets/earth_atmos_2048.jpg'),
+                bumpMap: new THREE.TextureLoader().load('https://threejs.org/examples/textures/planets/earth_normal_2048.jpg'),
+                bumpScale: 0.05,
+                specularMap: new THREE.TextureLoader().load('https://threejs.org/examples/textures/planets/earth_specular_2048.jpg'),
+                specular: new THREE.Color('grey'),
+                shininess: 5
+            });
+            
+            earth = new THREE.Mesh(geometry, material);
+            scene.add(earth);
+            
+            // Add ambient light
+            const ambientLight = new THREE.AmbientLight(0x333333);
+            scene.add(ambientLight);
+            
+            // Add directional light (sun)
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+            directionalLight.position.set(5, 3, 5);
+            scene.add(directionalLight);
+        }
+        
+        // Add stars to the scene
+        function addStars() {
+            const starsGeometry = new THREE.BufferGeometry();
+            const starsMaterial = new THREE.PointsMaterial({
+                color: 0xffffff,
+                size: 0.05,
+                transparent: true
+            });
+            
+            const starsVertices = [];
+            for (let i = 0; i < 1000; i++) {
+                const x = (Math.random() - 0.5) * 2000;
+                const y = (Math.random() - 0.5) * 2000;
+                const z = (Math.random() - 0.5) * 2000;
+                starsVertices.push(x, y, z);
+            }
+            
+            starsGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starsVertices, 3));
+            const stars = new THREE.Points(starsGeometry, starsMaterial);
+            scene.add(stars);
+        }
+        
+        // Load asteroid data from NASA API
+        async function loadAsteroidData() {
+            try {
+                // Show loading state
+                document.getElementById('asteroid-list').innerHTML = '<p>Loading asteroid data...</p>';
+                
+                // Fetch data from NASA API
+                const response = await fetch(`${API_URL}?start_date=${formatDate(today)}&end_date=${formatDate(tomorrow)}&api_key=${API_KEY}`);
+                const data = await response.json();
+                
+                // Process the data
+                processAsteroidData(data);
+            } catch (error) {
+                console.error('Error fetching asteroid data:', error);
+                document.getElementById('asteroid-list').innerHTML = '<p class="danger">Error loading asteroid data. Please try again.</p>';
+            }
+        }
+        
+        // Process asteroid data from NASA API
+        function processAsteroidData(data) {
+            // Clear previous asteroids
+            asteroidMeshes.forEach(mesh => scene.remove(mesh));
+            asteroidMeshes = [];
+            asteroids = [];
+            
+            // Extract all asteroids from the response
+            const asteroidList = document.getElementById('asteroid-list');
+            asteroidList.innerHTML = '';
+            
+            let closeApproaches = [];
+            let potentiallyHazardous = [];
+            
+            // Loop through each day in the response
+            for (const date in data.near_earth_objects) {
+                data.near_earth_objects[date].forEach(asteroid => {
+                    asteroids.push(asteroid);
+                    
+                    // Create asteroid card
+                    const asteroidCard = document.createElement('div');
+                    asteroidCard.className = `info-card ${asteroid.is_potentially_hazardous_asteroid ? 'danger' : ''}`;
+                    asteroidCard.innerHTML = `
+                        <h3>${asteroid.name}</h3>
+                        <div class="data-row">
+                            <span class="data-label">Diameter:</span>
+                            <span class="data-value">${Math.round(asteroid.estimated_diameter.meters.estimated_diameter_min)} - ${Math.round(asteroid.estimated_diameter.meters.estimated_diameter_max)} m</span>
+                        </div>
+                        <div class="data-row">
+                            <span class="data-label">Speed:</span>
+                            <span class="data-value">${Math.round(asteroid.close_approach_data[0].relative_velocity.kilometers_per_second)} km/s</span>
+                        </div>
+                        <div class="data-row">
+                            <span class="data-label">Miss Distance:</span>
+                            <span class="data-value">${Math.round(asteroid.close_approach_data[0].miss_distance.lunar)} lunar distances</span>
+                        </div>
+                        <div class="data-row">
+                            <span class="data-label">Hazardous:</span>
+                            <span class="data-value">${asteroid.is_potentially_hazardous_asteroid ? 'YES' : 'NO'}</span>
+                        </div>
+                    `;
+                    
+                    asteroidCard.addEventListener('mouseenter', () => highlightAsteroid(asteroid.id));
+                    asteroidCard.addEventListener('mouseleave', () => unhighlightAsteroid());
+                    asteroidCard.addEventListener('click', () => focusOnAsteroid(asteroid.id));
+                    
+                    asteroidList.appendChild(asteroidCard);
+                    
+                    // Track close approaches
+                    asteroid.close_approach_data.forEach(approach => {
+                        closeApproaches.push({
+                            date: approach.close_approach_date_full,
+                            distance: approach.miss_distance.kilometers,
+                            asteroid: asteroid.name
+                        });
+                    });
+                    
+                    // Track potentially hazardous asteroids
+                    if (asteroid.is_potentially_hazardous_asteroid) {
+                        potentiallyHazardous.push(asteroid);
+                    }
+                });
+            }
+            
+            // Update impact prediction
+            updateImpactPrediction(closeApproaches, potentiallyHazardous);
+            
+            // Create 3D asteroid models
+            createAsteroidModels();
+        }
+        
+        // Create 3D models for asteroids
+        function createAsteroidModels() {
+            asteroids.forEach(asteroid => {
+                const size = asteroid.estimated_diameter.meters.estimated_diameter_max / 1000;
+                const geometry = new THREE.SphereGeometry(size * 0.1, 8, 8);
+                
+                // Random asteroid color
+                const color = asteroid.is_potentially_hazardous_asteroid ? 
+                    new THREE.Color(0xff3300) : 
+                    new THREE.Color(Math.random() * 0.5 + 0.5, Math.random() * 0.5 + 0.5, Math.random() * 0.5 + 0.5);
+                
+                const material = new THREE.MeshPhongMaterial({ 
+                    color: color,
+                    flatShading: true
+                });
+                
+                const asteroidMesh = new THREE.Mesh(geometry, material);
+                
+                // Position asteroid randomly around Earth
+                const distance = 2 + Math.random() * 3;
+                const angle = Math.random() * Math.PI * 2;
+                asteroidMesh.position.x = Math.cos(angle) * distance;
+                asteroidMesh.position.y = (Math.random() - 0.5) * 0.5;
+                asteroidMesh.position.z = Math.sin(angle) * distance;
+                
+                // Store asteroid reference
+                asteroidMesh.userData = { id: asteroid.id, name: asteroid.name };
+                asteroidMeshes.push(asteroidMesh);
+                scene.add(asteroidMesh);
+            });
+        }
+        
+        // Highlight an asteroid in the 3D view
+        function highlightAsteroid(asteroidId) {
+            unhighlightAsteroid();
+            
+            const asteroidMesh = asteroidMeshes.find(mesh => mesh.userData.id === asteroidId);
+            if (asteroidMesh) {
+                asteroidMesh.material.emissive = new THREE.Color(0xffff00);
+                asteroidMesh.material.emissiveIntensity = 0.5;
+                highlightedAsteroid = asteroidMesh;
+                
+                // Show tooltip
+                const tooltip = document.getElementById('tooltip');
+                tooltip.textContent = asteroidMesh.userData.name;
+                tooltip.style.opacity = '1';
+                
+                // Update tooltip position
+                const updateTooltipPosition = () => {
+                    const vector = new THREE.Vector3();
+                    vector.setFromMatrixPosition(asteroidMesh.matrixWorld);
+                    vector.project(camera);
+                    
+                    const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
+                    const y = (-(vector.y * 0.5) + 0.5) * window.innerHeight;
+                    
+                    tooltip.style.left = `${x}px`;
+                    tooltip.style.top = `${y}px`;
+                    
+                    if (highlightedAsteroid === asteroidMesh) {
+                        requestAnimationFrame(updateTooltipPosition);
+                    }
+                };
+                
+                updateTooltipPosition();
+            }
+        }
+        
+        // Remove highlight from asteroid
+        function unhighlightAsteroid() {
+            if (highlightedAsteroid) {
+                highlightedAsteroid.material.emissive.setHex(0x000000);
+                highlightedAsteroid = null;
+                document.getElementById('tooltip').style.opacity = '0';
+            }
+        }
+        
+        // Focus camera on a specific asteroid
+        function focusOnAsteroid(asteroidId) {
+            const asteroidMesh = asteroidMeshes.find(mesh => mesh.userData.id === asteroidId);
+            if (asteroidMesh) {
+                // Calculate position slightly away from the asteroid
+                const direction = new THREE.Vector3().subVectors(camera.position, asteroidMesh.position).normalize();
+                const targetPosition = new THREE.Vector3().copy(asteroidMesh.position).add(direction.multiplyScalar(1.5));
+                
+                // Animate camera to new position
+                gsap.to(camera.position, {
+                    x: targetPosition.x,
+                    y: targetPosition.y,
+                    z: targetPosition.z,
+                    duration: 1,
+                    ease: "power2.inOut",
+                    onUpdate: function() {
+                        camera.lookAt(asteroidMesh.position);
+                    }
+                });
+            }
+        }
+        
+        // Update impact prediction display
+        function updateImpactPrediction(closeApproaches, potentiallyHazardous) {
+            // Find the closest approach
+            if (closeApproaches.length > 0) {
+                const closest = closeApproaches.reduce((prev, curr) => 
+                    parseFloat(curr.distance) < parseFloat(prev.distance) ? curr : prev);
+                
+                document.getElementById('next-approach').textContent = 
+                    `${closest.asteroid} on ${closest.date} (${Math.round(closest.distance / 1000)} thousand km)`;
+                
+                // Calculate "threat level" (just for visualization)
+                const minDistance = 384400; // Moon distance in km
+                const distanceRatio = Math.min(1, parseFloat(closest.distance) / minDistance);
+                document.getElementById('timeline-progress').style.width = `${(1 - distanceRatio) * 100}%`;
+            }
+            
+            // Update threat level
+            if (potentiallyHazardous.length > 0) {
+                document.getElementById('potential-impact').textContent = 
+                    `${potentiallyHazardous.length} potential threat${potentiallyHazardous.length > 1 ? 's' : ''}`;
+                document.getElementById('potential-impact').style.color = 'var(--warning-orange)';
+                document.getElementById('threat-level').textContent = 'ELEVATED';
+                document.getElementById('threat-level').style.color = 'var(--warning-orange)';
+            } else {
+                document.getElementById('potential-impact').textContent = 'None detected';
+                document.getElementById('potential-impact').style.color = 'var(--neon-blue)';
+                document.getElementById('threat-level').textContent = 'LOW';
+                document.getElementById('threat-level').style.color = 'var(--neon-blue)';
+            }
+        }
+        
+        // Handle window resize
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            // Rotate Earth
+            if (earth) earth.rotation.y += 0.002;
+            
+            // Rotate asteroids
+            asteroidMeshes.forEach(asteroid => {
+                asteroid.rotation.x += 0.01;
+                asteroid.rotation.y += 0.01;
+            });
+            
+            // Update controls
+            controls.update();
+            
+            // Render scene
+            renderer.render(scene, camera);
+        }
+        
+        // Initialize the app
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>

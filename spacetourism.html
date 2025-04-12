@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultimate Space Tourism 3D Experience</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Arial', sans-serif;
+            color: white;
+            background: #000;
+        }
+        #info {
+            position: absolute;
+            top: 20px;
+            width: 100%;
+            text-align: center;
+            z-index: 100;
+            pointer-events: none;
+            text-shadow: 0 0 10px rgba(0, 150, 255, 0.8);
+            font-size: 1.5rem;
+        }
+        #loading {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+            transition: opacity 1s ease-out;
+        }
+        .progress {
+            width: 50%;
+            max-width: 300px;
+            height: 4px;
+            background: #333;
+            margin-top: 20px;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #0066ff, #00ffff);
+            width: 0%;
+            transition: width 0.5s ease-out;
+            box-shadow: 0 0 10px rgba(0, 200, 255, 0.7);
+        }
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            border: 1px solid rgba(0, 150, 255, 0.5);
+            box-shadow: 0 0 15px rgba(0, 150, 255, 0.3);
+        }
+        #hud {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            border: 1px solid rgba(0, 150, 255, 0.5);
+            box-shadow: 0 0 15px rgba(0, 150, 255, 0.3);
+        }
+        #error {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 50, 50, 0.9);
+            padding: 20px;
+            border-radius: 8px;
+            display: none;
+            z-index: 300;
+            max-width: 80%;
+            text-align: center;
+            border: 1px solid rgba(255, 100, 100, 0.8);
+            box-shadow: 0 0 20px rgba(255, 50, 50, 0.6);
+        }
+        #loading h2 {
+            animation: pulse 2s infinite;
+            text-shadow: 0 0 10px rgba(0, 200, 255, 0.8);
+        }
+        @keyframes pulse {
+            0% { opacity: 0.7; }
+            50% { opacity: 1; }
+            100% { opacity: 0.7; }
+        }
+        #loading-message {
+            margin-top: 10px;
+            font-size: 0.9rem;
+            color: #aaa;
+        }
+        #credits {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 8px;
+            border-radius: 5px;
+            font-size: 0.8rem;
+            color: #aaa;
+        }
+    </style>
+</head>
+<body>
+    <div id="info">SPACE TOURISM EXPERIENCE</div>
+    <div id="hud">
+        <div>Altitude: <span id="altitude">0</span> km</div>
+        <div>Velocity: <span id="velocity">0</span> km/s</div>
+        <div>Location: <span id="location">Near Earth</span></div>
+    </div>
+    <div id="controls">
+        WASD to move | Mouse to look | Scroll to zoom | Space to boost
+    </div>
+    <div id="error"></div>
+    <div id="credits">Space Tourism 3D Experience</div>
+    
+    <div id="loading">
+        <h2>INITIALIZING SPACE ENVIRONMENT</h2>
+        <div id="loading-message">Loading high-resolution textures...</div>
+        <div class="progress">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+    </div>
+
+    <!-- Updated Three.js CDN links with all required dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/effects/LensFlare.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/shaders/CopyShader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/shaders/LuminosityHighPassShader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/postprocessing/EffectComposer.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/postprocessing/RenderPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/postprocessing/ShaderPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/postprocessing/UnrealBloomPass.js"></script>
+
+    <script>
+        // Main variables
+        let camera, scene, renderer, composer;
+        let controls, bloomPass;
+        let earth, stars, spaceship;
+        let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false, moveBoost = false;
+        let velocity = new THREE.Vector3();
+        let prevTime = performance.now();
+        let cameraHeight = 5;
+        let assetsLoaded = 0;
+        let assetsTotal = 10; // Approximate number of assets to load
+        
+        // Setup loading manager with enhanced error handling
+        const loadingManager = new THREE.LoadingManager(
+            // When all assets load
+            () => {
+                document.getElementById('loading-message').textContent = "Finalizing space environment...";
+                setTimeout(() => {
+                    document.getElementById('loading').style.opacity = 0;
+                    setTimeout(() => {
+                        document.getElementById('loading').style.display = 'none';
+                        // Start subtle animation
+                        startStarPulse();
+                    }, 1000);
+                }, 1000);
+            },
+            // Progress callback
+            (url, itemsLoaded, itemsTotal) => {
+                assetsLoaded++;
+                const progress = (assetsLoaded / assetsTotal) * 100;
+                document.getElementById('progressBar').style.width = `${Math.min(progress, 100)}%`;
+                
+                // Update loading message based on progress
+                if (progress < 30) {
+                    document.getElementById('loading-message').textContent = "Loading star field...";
+                } else if (progress < 60) {
+                    document.getElementById('loading-message').textContent = "Loading planetary textures...";
+                } else if (progress < 90) {
+                    document.getElementById('loading-message').textContent = "Initializing spacecraft...";
+                }
+            },
+            // Error callback
+            (url) => {
+                showError(`Failed to load: ${url.split('/').pop()}. Using fallback assets.`, false);
+            }
+        );
+        
+        const textureLoader = new THREE.TextureLoader(loadingManager);
+        
+        function showError(message, isFatal = false) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.innerHTML = `<div style="margin-bottom:10px;">⚠️ SPACE SYSTEM ALERT ⚠️</div>${message}`;
+            errorDiv.style.display = 'block';
+            
+            if (isFatal) {
+                errorDiv.style.background = 'rgba(255, 0, 0, 0.9)';
+                errorDiv.innerHTML += '<div style="margin-top:15px;font-size:0.8em;">Please refresh to try again</div>';
+            } else {
+                setTimeout(() => {
+                    errorDiv.style.display = 'none';
+                }, 5000);
+            }
+        }
+        
+        // Initialize the scene
+        init();
+        animate();
+        
+        function init() {
+            // Create scene with better fog
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x000010, 0.0002);
+            
+            // Create camera with better initial position
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100000);
+            camera.position.set(0, 5, 30);
+            
+            // Create renderer with improved settings
+            renderer = new THREE.WebGLRenderer({ 
+                antialias: true,
+                powerPreference: "high-performance"
+            });
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.2;
+            document.body.appendChild(renderer.domElement);
+            
+            // Setup post-processing for bloom effect
+            const renderScene = new THREE.RenderPass(scene, camera);
+            
+            // Bloom pass with proper parameters
+            bloomPass = new THREE.UnrealBloomPass(
+                new THREE.Vector2(window.innerWidth, window.innerHeight),
+                1.5,  // strength
+                0.4,  // radius
+                0.85  // threshold
+            );
+            
+            composer = new THREE.EffectComposer(renderer);
+            composer.addPass(renderScene);
+            composer.addPass(bloomPass);
+            
+            // Create controls with better damping
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.target.set(-50, 0, -100);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.1;
+            controls.screenSpacePanning = false;
+            controls.maxPolarAngle = Math.PI;
+            controls.minPolarAngle = 0;
+            controls.maxDistance = 1000;
+            controls.minDistance = 5;
+            controls.rotateSpeed = 0.5;
+            controls.zoomSpeed = 1.2;
+            controls.panSpeed = 0.8;
+            
+            // Handle window resize
+            window.addEventListener('resize', onWindowResize);
+            
+            // Create space environment
+            createStars();
+            createEarth();
+            createSpaceship();
+            createAsteroids();
+            createSun();
+            createGalaxy();
+            
+            // Add enhanced lighting
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1.5);
+            directionalLight.position.set(1, 1, 1);
+            directionalLight.castShadow = true;
+            directionalLight.shadow.mapSize.width = 2048;
+            directionalLight.shadow.mapSize.height = 2048;
+            scene.add(directionalLight);
+            
+            // Add sun light with fallback if lens flare fails
+            const sunLight = new THREE.DirectionalLight(0xffffff, 2);
+            sunLight.position.set(100, 50, 100);
+            scene.add(sunLight);
+            
+            // Keyboard controls
+            document.addEventListener('keydown', onKeyDown);
+            document.addEventListener('keyup', onKeyUp);
+            document.addEventListener('keypress', (e) => {
+                if (e.code === 'Space') moveBoost = true;
+            });
+        }
+        
+        function createStars() {
+            const starGeometry = new THREE.BufferGeometry();
+            const starMaterial = new THREE.PointsMaterial({
+                color: 0xffffff,
+                size: 0.2,
+                sizeAttenuation: true,
+                transparent: true,
+                opacity: 1,
+                blending: THREE.AdditiveBlending
+            });
+            
+            const starVertices = [];
+            const starColors = [];
+            const starSizes = [];
+            
+            for (let i = 0; i < 20000; i++) {
+                // Position
+                const x = (Math.random() - 0.5) * 3000;
+                const y = (Math.random() - 0.5) * 3000;
+                const z = (Math.random() - 0.5) * 3000;
+                starVertices.push(x, y, z);
+                
+                // Color - some stars with slight color variations
+                const colorRand = Math.random();
+                if (colorRand > 0.9) {
+                    starColors.push(0.9, 0.9, 1.0); // Blue-white
+                } else if (colorRand > 0.8) {
+                    starColors.push(1.0, 0.8, 0.8); // Reddish
+                } else {
+                    starColors.push(1.0, 1.0, 1.0); // White
+                }
+                
+                // Size variation
+                starSizes.push(0.1 + Math.random() * 0.3);
+            }
+            
+            starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3));
+            starGeometry.setAttribute('color', new THREE.Float32BufferAttribute(starColors, 3));
+            starGeometry.setAttribute('size', new THREE.Float32BufferAttribute(starSizes, 1));
+            
+            stars = new THREE.Points(starGeometry, starMaterial);
+            scene.add(stars);
+        }
+        
+        function startStarPulse() {
+            const starMaterial = stars.material;
+            let pulseDirection = 0.01;
+            
+            function pulse() {
+                starMaterial.opacity += pulseDirection;
+                
+                if (starMaterial.opacity >= 1) {
+                    starMaterial.opacity = 1;
+                    pulseDirection = -0.01;
+                } else if (starMaterial.opacity <= 0.7) {
+                    starMaterial.opacity = 0.7;
+                    pulseDirection = 0.01;
+                }
+                
+                if (document.getElementById('loading').style.display === 'none') {
+                    requestAnimationFrame(pulse);
+                }
+            }
+            
+            pulse();
+        }
+        
+        function createEarth() {
+            // High-quality Earth with multiple fallbacks
+            const earthGeometry = new THREE.SphereGeometry(10, 128, 128);
+            
+            // Try to load high-resolution Earth textures
+            try {
+                const earthMaterial = new THREE.MeshPhongMaterial({
+                    map: textureLoader.load('https://threejs.org/examples/textures/planets/earth_atmos_4096.jpg', 
+                        undefined, 
+                        undefined, 
+                        () => { 
+                            showError('High-res Earth texture failed, using standard resolution');
+                            // Fallback to 2048 version
+                            earthMaterial.map = textureLoader.load('https://threejs.org/examples/textures/planets/earth_atmos_2048.jpg');
+                        }),
+                    bumpMap: textureLoader.load('https://threejs.org/examples/textures/planets/earth_normal_2048.jpg',
+                        undefined,
+                        undefined,
+                        () => { earthMaterial.bumpMap = null; }),
+                    bumpScale: 0.15,
+                    specularMap: textureLoader.load('https://threejs.org/examples/textures/planets/earth_specular_2048.jpg',
+                        undefined,
+                        undefined,
+                        () => { earthMaterial.specularMap = null; }),
+                    specular: new THREE.Color('grey'),
+                    shininess: 15,
+                    reflectivity: 0.2
+                });
+                
+                earth = new THREE.Mesh(earthGeometry, earthMaterial);
+            } catch (e) {
+                showError('Error loading Earth textures: ' + e.message);
+                // Fallback to basic Earth
+                earth = new THREE.Mesh(
+                    earthGeometry,
+                    new THREE.MeshPhongMaterial({
+                        color: 0x1a66ff,
+                        specular: 0x111111,
+                        shininess: 5
+                    })
+                );
+            }
+            
+            earth.position.set(-50, 0, -100);
+            earth.castShadow = true;
+            earth.receiveShadow = true;
+            earth.rotation.y = Math.PI / 2; // Start with Americas visible
+            scene.add(earth);
+            
+            // Add clouds with multiple fallbacks
+            const cloudGeometry = new THREE.SphereGeometry(10.1, 128, 128);
+            try {
+                const cloudMaterial = new THREE.MeshPhongMaterial({
+                    map: textureLoader.load('https://threejs.org/examples/textures/planets/earth_clouds_2048.png',
+                        undefined,
+                        undefined,
+                        () => {
+                            showError('High-res cloud texture failed, using standard resolution');
+                            cloudMaterial.map = textureLoader.load('https://threejs.org/examples/textures/planets/earth_clouds_1024.png');
+                        }),
+                    transparent: true,
+                    opacity: 0.4,
+                    depthWrite: false
+                });
+                
+                const clouds = new THREE.Mesh(cloudGeometry, cloudMaterial);
+                clouds.position.set(-50, 0, -100);
+                clouds.rotation.y = Math.PI / 2;
+                scene.add(clouds);
+                
+                // Animate clouds slightly faster than Earth
+                setInterval(() => {
+                    if (clouds) clouds.rotation.y += 0.0002;
+                }, 16);
+            } catch (e) {
+                showError('Cloud texture failed, skipping clouds');
+            }
+            
+            // Add atmospheric glow
+            const atmosphereGeometry = new THREE.SphereGeometry(10.2, 128, 128);
+            const atmosphereMaterial = new THREE.ShaderMaterial({
+                uniforms: {},
+                vertexShader: `
+                    varying vec3 vNormal;
+                    void main() {
+                        vNormal = normalize(normalMatrix * normal);
+                        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                    }
+                `,
+                fragmentShader: `
+                    varying vec3 vNormal;
+                    void main() {
+                        float intensity = pow(0.7 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 2.0);
+                        gl_FragColor = vec4(0.3, 0.6, 1.0, 1.0) * intensity;
+                    }
+                `,
+                side: THREE.BackSide,
+                blending: THREE.AdditiveBlending,
+                transparent: true
+            });
+            
+            const atmosphere = new THREE.Mesh(atmosphereGeometry, atmosphereMaterial);
+            atmosphere.position.set(-50, 0, -100);
+            atmosphere.scale.set(1.1, 1.1, 1.1);
+            scene.add(atmosphere);
+        }
+        
+        function createSpaceship() {
+            // More detailed spaceship model
+            const cabinGeometry = new THREE.SphereGeometry(0.8, 32, 32, 0, Math.PI * 2, 0, Math.PI / 2);
+            const bodyGeometry = new THREE.ConeGeometry(0.6, 2, 32);
+            const wingGeometry = new THREE.BoxGeometry(1.8, 0.1, 0.8);
+            const engineGeometry = new THREE.CylinderGeometry(0.3, 0.1, 0.8, 32);
+            
+            const glassMaterial = new THREE.MeshPhysicalMaterial({
+                color: 0x88ccff,
+                transmission: 0.9,
+                roughness: 0.1,
+                metalness: 0.1,
+                clearcoat: 0.5,
+                clearcoatRoughness: 0.1,
+                ior: 1.3,
+                thickness: 0.5,
+                envMapIntensity: 1,
+                side: THREE.DoubleSide
+            });
+            
+            const bodyMaterial = new THREE.MeshPhongMaterial({
+                color: 0x3498db,
+                shininess: 100,
+                specular: 0xffffff,
+                emissive: 0x003366,
+                emissiveIntensity: 0.2
+            });
+            
+            const wingMaterial = new THREE.MeshPhongMaterial({
+                color: 0x2980b9,
+                shininess: 50,
+                specular: 0x222222
+            });
+            
+            const engineMaterial = new THREE.MeshPhongMaterial({
+                color: 0x444444,
+                shininess: 30,
+                emissive: 0xff6600,
+                emissiveIntensity: 0.5
+            });
+            
+            // Cabin
+            const cabin = new THREE.Mesh(cabinGeometry, glassMaterial);
+            cabin.position.set(0, 0.5, 0.5);
+            cabin.rotation.x = Math.PI / 2;
+            
+            // Body
+            const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+            body.position.set(0, 0, 0);
+            body.rotation.y = Math.PI;
+            
+            // Wings
+            const leftWing = new THREE.Mesh(wingGeometry, wingMaterial);
+            leftWing.position.set(-1.2, 0, -0.5);
+            leftWing.rotation.z = -0.2;
+            
+            const rightWing = new THREE.Mesh(wingGeometry, wingMaterial);
+            rightWing.position.set(1.2, 0, -0.5);
+            rightWing.rotation.z = 0.2;
+            
+            // Engines
+            const leftEngine = new THREE.Mesh(engineGeometry, engineMaterial);
+            leftEngine.position.set(-0.5, 0, -1.8);
+            leftEngine.rotation.x = Math.PI / 2;
+            
+            const rightEngine = new THREE.Mesh(engineGeometry, engineMaterial);
+            rightEngine.position.set(0.5, 0, -1.8);
+            rightEngine.rotation.x = Math.PI / 2;
+            
+            // Main engine
+            const mainEngine = new THREE.Mesh(engineGeometry, engineMaterial);
+            mainEngine.position.set(0, 0, -1.8);
+            mainEngine.rotation.x = Math.PI / 2;
+            mainEngine.scale.set(1.5, 1.5, 1.5);
+            
+            spaceship = new THREE.Group();
+            spaceship.add(cabin);
+            spaceship.add(body);
+            spaceship.add(leftWing);
+            spaceship.add(rightWing);
+            spaceship.add(leftEngine);
+            spaceship.add(rightEngine);
+            spaceship.add(mainEngine);
+            spaceship.position.copy(camera.position);
+            spaceship.rotation.copy(camera.rotation);
+            spaceship.castShadow = true;
+            scene.add(spaceship);
+            
+            // Add engine glow with particles
+            const engineGlow = new THREE.PointLight(0x00a2ff, 5, 15, 2);
+            engineGlow.position.set(0, 0, -2.5);
+            spaceship.add(engineGlow);
+            
+            // Engine particles
+            const particleCount = 100;
+            const particles = new THREE.BufferGeometry();
+            const particlePositions = new Float32Array(particleCount * 3);
+            const particleSizes = new Float32Array(particleCount);
+            
+            for (let i = 0; i < particleCount; i++) {
+                const i3 = i * 3;
+                particlePositions[i3] = (Math.random() - 0.5) * 0.5;
+                particlePositions[i3 + 1] = (Math.random() - 0.5) * 0.5;
+                particlePositions[i3 + 2] = -2.5 - Math.random() * 3;
+                particleSizes[i] = 0.1 + Math.random() * 0.3;
+            }
+            
+            particles.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+            particles.setAttribute('size', new THREE.BufferAttribute(particleSizes, 1));
+            
+            const particleMaterial = new THREE.PointsMaterial({
+                color: 0x00ffff,
+                size: 0.2,
+                sizeAttenuation: true,
+                transparent: true,
+                opacity: 0.8,
+                blending: THREE.AdditiveBlending
+            });
+            
+            const particleSystem = new THREE.Points(particles, particleMaterial);
+            particleSystem.position.set(0, 0, 0);
+            spaceship.add(particleSystem);
+        }
+        
+        function createAsteroids() {
+            const asteroidCount = 100;
+            const asteroids = new THREE.Group();
+            
+            // Create several asteroid geometries for variety
+            const geometries = [
+                new THREE.IcosahedronGeometry(0.5, 0),
+                new THREE.IcosahedronGeometry(0.5, 1),
+                new THREE.DodecahedronGeometry(0.5, 0),
+                new THREE.OctahedronGeometry(0.5, 0)
+            ];
+            
+            const materials = [
+                new THREE.MeshPhongMaterial({ color: 0x888888, flatShading: true }),
+                new THREE.MeshPhongMaterial({ color: 0x777777, flatShading: true }),
+                new THREE.MeshPhongMaterial({ color: 0x999999, flatShading: true })
+            ];
+            
+            for (let i = 0; i < asteroidCount; i++) {
+                const geometry = geometries[Math.floor(Math.random() * geometries.length)];
+                const material = materials[Math.floor(Math.random() * materials.length)];
+                const asteroid = new THREE.Mesh(geometry, material);
+                
+                // Random position in a torus shape around the flight path
+                const angle = Math.random() * Math.PI * 2;
+                const distance = 50 + Math.random() * 200;
+                const height = (Math.random() - 0.5) * 100;
+                
+                asteroid.position.x = Math.cos(angle) * distance;
+                asteroid.position.y = height;
+                asteroid.position.z = Math.sin(angle) * distance - 200;
+                
+                // Random size and rotation
+                const scale = 0.3 + Math.random() * 2;
+                asteroid.scale.set(scale, scale, scale);
+                asteroid.rotation.set(
+                    Math.random() * Math.PI * 2,
+                    Math.random() * Math.PI * 2,
+                    Math.random() * Math.PI * 2
+                );
+                
+                // Random rotation speed
+                asteroid.userData = {
+                    rotationSpeedX: Math.random() * 0.01 - 0.005,
+                    rotationSpeedY: Math.random() * 0.01 - 0.005,
+                    rotationSpeedZ: Math.random() * 0.01 - 0.005
+                };
+                
+                asteroid.castShadow = true;
+                asteroids.add(asteroid);
+            }
+            
+            scene.add(asteroids);
+        }
+        
+        function createSun() {
+            const sunGeometry = new THREE.SphereGeometry(20, 64, 64);
+            
+            // Sun material with glow effect
+            const sunMaterial = new THREE.MeshBasicMaterial({
+                color: 0xffffee,
+                transparent: true,
+                opacity: 0.95,
+                blending: THREE.AdditiveBlending
+            });
+            
+            const sun = new THREE.Mesh(sunGeometry, sunMaterial);
+            sun.position.set(100, 50, 100);
+            scene.add(sun);
+            
+            // Sun corona effect
+            const coronaGeometry = new THREE.SphereGeometry(22, 64, 64);
+            const coronaMaterial = new THREE.ShaderMaterial({
+                uniforms: {
+                    time: { value: 0 }
+                },
+                vertexShader: `
+                    varying vec2 vUv;
+                    void main() {
+                        vUv = uv;
+                        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                    }
+                `,
+                fragmentShader: `
+                    uniform float time;
+                    varying vec2 vUv;
+                    
+                    void main() {
+                        vec2 uv = vUv * 2.0 - 1.0;
+                        float distance = length(uv);
+                        float intensity = smoothstep(0.8, 0.0, distance);
+                        
+                        // Add some noise for solar activity
+                        float noise = sin(uv.x * 50.0 + time) * sin(uv.y * 30.0 + time * 1.3) * 0.1;
+                        
+                        vec3 color = mix(
+                            vec3(1.0, 0.7, 0.3),
+                            vec3(1.0, 0.3, 0.1),
+                            distance
+                        );
+                        
+                        gl_FragColor = vec4(color * (intensity + noise), intensity * 0.5);
+                    }
+                `,
+                transparent: true,
+                blending: THREE.AdditiveBlending,
+                side: THREE.BackSide
+            });
+            
+            const corona = new THREE.Mesh(coronaGeometry, coronaMaterial);
+            corona.position.copy(sun.position);
+            scene.add(corona);
+            
+            // Try to add lens flare with multiple fallbacks
+            try {
+                const textureFlare0 = textureLoader.load('https://threejs.org/examples/textures/lensflare/lensflare0.png');
+                const textureFlare3 = textureLoader.load('https://threejs.org/examples/textures/lensflare/lensflare3.png');
+                
+                const lensflare = new THREE.Lensflare();
+                lensflare.addElement(new THREE.LensflareElement(textureFlare0, 700, 0, new THREE.Color(0xffffff)));
+                lensflare.addElement(new THREE.LensflareElement(textureFlare3, 60, 0.6));
+                lensflare.addElement(new THREE.LensflareElement(textureFlare3, 70, 0.7));
+                lensflare.addElement(new THREE.LensflareElement(textureFlare3, 120, 0.9));
+                lensflare.addElement(new THREE.LensflareElement(textureFlare3, 70, 1));
+                
+                const sunLight = new THREE.DirectionalLight(0xffffff, 2);
+                sunLight.position.copy(sun.position);
+                sunLight.add(lensflare);
+                scene.add(sunLight);
+            } catch (e) {
+                showError('Lens flare effect unavailable. Using enhanced sun glow instead.');
+                // Enhance sun glow as fallback
+                sunMaterial.color.set(0xffffaa);
+                sunMaterial.opacity = 0.98;
+                coronaMaterial.uniforms.time.value = 0;
+                
+                // Animate corona
+                function animateCorona() {
+                    coronaMaterial.uniforms.time.value += 0.01;
+                    requestAnimationFrame(animateCorona);
+                }
+                animateCorona();
+            }
+        }
+        
+        function createGalaxy() {
+            // Create a distant galaxy background
+            const galaxyGeometry = new THREE.SphereGeometry(5000, 32, 32);
+            const galaxyMaterial = new THREE.MeshBasicMaterial({
+                map: textureLoader.load('https://threejs.org/examples/textures/uv_grid_opengl.jpg', 
+                    undefined,
+                    undefined,
+                    () => {
+                        // Fallback if galaxy texture fails
+                        galaxyMaterial.color.set(0x000033);
+                        galaxyMaterial.map = null;
+                    }),
+                side: THREE.BackSide,
+                transparent: true,
+                opacity: 0.3
+            });
+            
+            const galaxy = new THREE.Mesh(galaxyGeometry, galaxyMaterial);
+            scene.add(galaxy);
+        }
+        
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            composer.setSize(window.innerWidth, window.innerHeight);
+        }
+        
+        function onKeyDown(event) {
+            switch (event.code) {
+                case 'ArrowUp':
+                case 'KeyW':
+                    moveForward = true;
+                    break;
+                case 'ArrowLeft':
+                case 'KeyA':
+                    moveLeft = true;
+                    break;
+                case 'ArrowDown':
+                case 'KeyS':
+                    moveBackward = true;
+                    break;
+                case 'ArrowRight':
+                case 'KeyD':
+                    moveRight = true;
+                    break;
+                case 'Space':
+                    moveBoost = true;
+                    break;
+            }
+        }
+        
+        function onKeyUp(event) {
+            switch (event.code) {
+                case 'ArrowUp':
+                case 'KeyW':
+                    moveForward = false;
+                    break;
+                case 'ArrowLeft':
+                case 'KeyA':
+                    moveLeft = false;
+                    break;
+                case 'ArrowDown':
+                case 'KeyS':
+                    moveBackward = false;
+                    break;
+                case 'ArrowRight':
+                case 'KeyD':
+                    moveRight = false;
+                    break;
+                case 'Space':
+                    moveBoost = false;
+                    break;
+            }
+        }
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            // Calculate delta time
+            const time = performance.now();
+            const delta = (time - prevTime) / 1000;
+            prevTime = time;
+            
+            // Rotate Earth
+            if (earth) {
+                earth.rotation.y += 0.0005;
+            }
+            
+            // Rotate asteroids
+            scene.children.forEach(child => {
+                if (child.userData.rotationSpeedX) {
+                    child.rotation.x += child.userData.rotationSpeedX;
+                    child.rotation.y += child.userData.rotationSpeedY;
+                    child.rotation.z += child.userData.rotationSpeedZ;
+                }
+            });
+            
+            // Update camera movement
+            const baseSpeed = 20;
+            const boostFactor = moveBoost ? 3 : 1;
+            const moveSpeed = baseSpeed * boostFactor;
+            
+            velocity.x -= velocity.x * 5.0 * delta;
+            velocity.z -= velocity.z * 5.0 * delta;
+            
+            if (moveForward) velocity.z -= moveSpeed * delta;
+            if (moveBackward) velocity.z += moveSpeed * delta;
+            if (moveLeft) velocity.x -= moveSpeed * delta;
+            if (moveRight) velocity.x += moveSpeed * delta;
+            
+            // Apply movement to camera and spaceship
+            controls.target.add(velocity);
+            camera.position.add(velocity);
+            if (spaceship) {
+                spaceship.position.copy(camera.position);
+                spaceship.rotation.copy(camera.rotation);
+                
+                // Add subtle spaceship animation
+                spaceship.rotation.z = Math.sin(time * 0.002) * 0.05;
+                spaceship.rotation.x = Math.cos(time * 0.0015) * 0.03;
+            }
+            
+            // Update HUD
+            updateHUD();
+            
+            // Update controls
+            controls.update();
+            
+            // Render scene with post-processing
+            composer.render();
+        }
+        
+        function updateHUD() {
+            // Calculate altitude (distance from Earth)
+            if (earth) {
+                const distance = camera.position.distanceTo(earth.position) - 10;
+                document.getElementById('altitude').textContent = Math.round(distance);
+                
+                // Update location text based on distance
+                if (distance < 20) {
+                    document.getElementById('location').textContent = "Low Earth Orbit";
+                } else if (distance < 100) {
+                    document.getElementById('location').textContent = "Medium Earth Orbit";
+                } else if (distance < 1000) {
+                    document.getElementById('location').textContent = "High Earth Orbit";
+                } else {
+                    document.getElementById('location').textContent = "Deep Space";
+                }
+            }
+            
+            // Calculate velocity with boost indication
+            const speed = velocity.length();
+            document.getElementById('velocity').textContent = speed.toFixed(2);
+            
+            if (moveBoost) {
+                document.getElementById('velocity').style.color = "#ff6600";
+                document.getElementById('velocity').style.textShadow = "0 0 10px #ff6600";
+            } else {
+                document.getElementById('velocity').style.color = "white";
+                document.getElementById('velocity').style.textShadow = "none";
+            }
+        }
+    </script>
+</body>
+</html>
